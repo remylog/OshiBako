@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>設定 - YouTube Dashboard</title>
+  <style>
+    body { margin: 0; padding: 0; font-family: "Helvetica Neue", Arial, sans-serif; background-color: #f1f1f1; min-height: 100vh; }
+    
+    .container {
+      background: white; 
+      padding: 20px; 
+      border-radius: 8px; 
+      max-width: 800px; 
+      margin: 20px auto; 
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      width: 90%;
+    }
+
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+    h1 { margin: 0; font-size: 20px; color: #333; }
+    .back-btn { text-decoration: none; background: #666; color: white; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; }
+    
+    .input-group { display: flex; gap: 10px; margin-bottom: 10px; background: #f9f9f9; padding: 15px; border-radius: 8px; flex-wrap: wrap; }
+    input { padding: 10px; border: 1px solid #ddd; border-radius: 4px; flex: 1; min-width: 200px; }
+    #addChannelBtn, #bulkAddBtn { background: #cc0000; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    
+    .import-area { padding: 15px; background: #eef; border-radius: 8px; border: 1px solid #dde; }
+    .import-btn { background: #444; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+
+    .channel-list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; gap: 10px; }
+    .channel-info { flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+    .channel-name { font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    
+    .group-edit-input { width: 100px; padding: 4px; font-size: 12px; border: 1px solid #ddd; border-radius: 4px; color: #555; }
+
+    .btn-area { display: flex; gap: 5px; flex-shrink: 0; }
+    .action-btn { font-size: 11px; padding: 6px 10px; border-radius: 4px; cursor: pointer; border: none; }
+    .update-btn { background: #eee; color: #333; }
+    .delete-btn { background: #fff0f0; color: #cc0000; border: 1px solid #ffcccc; }
+    .restore-btn { background: #e6f9e6; color: green; border: 1px solid #ccffcc; }
+
+    h2 { font-size: 16px; margin-bottom: 10px; color: #555; border-left: 4px solid #cc0000; padding-left: 10px; margin-top: 30px; }
+    .archive-section { opacity: 0.8; margin-top: 40px; border-top: 2px dashed #ddd; padding-top: 10px; }
+
+    /* スマホ用調整 */
+    @media (max-width: 600px) {
+      .container { margin: 10px auto; width: 95%; padding: 15px; }
+      .input-group { flex-direction: column; }
+      input, button, textarea { width: 100%; box-sizing: border-box; }
+      
+      .channel-list-item { align-items: flex-start; }
+      .channel-info { width: 100%; }
+      .btn-area { margin-top: 5px; align-self: flex-end; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <h1>⚙️ 設定</h1>
+      <a href="/" class="back-btn">戻る</a>
+    </div>
+
+    <h2>チャンネル追加</h2>
+    <div class="input-group">
+      <input type="text" id="newChannelUrl" placeholder="URL または ID (UC...)">
+      <input type="text" id="newChannelGroup" placeholder="グループ (カンマ区切り)">
+      <button id="addChannelBtn">追加</button>
+    </div>
+    <div id="addStatus" style="font-size:13px; color:red; margin-bottom:5px;"></div>
+
+    <h2>一括追加</h2>
+    <div class="input-group" style="display:block;">
+      <p style="font-size:12px; color:#666; margin-bottom:5px;">1行に1つ (例: <code>UCxxx..., Game</code>)</p>
+      <textarea id="bulkChannelInput" rows="3" style="width:100%; padding:10px; box-sizing:border-box; border-radius:4px; border:1px solid #ddd;"></textarea>
+      <button id="bulkAddBtn" style="margin-top:10px;">実行</button>
+      <div id="bulkStatus" style="font-size:13px; margin-top:5px;"></div>
+    </div>
+
+    <h2>登録済みリスト</h2>
+    <div id="settingsList">読み込み中...</div>
+
+    <div class="archive-section">
+      <h2 style="border-left-color: #999;">🗑️ アーカイブ (7日後削除)</h2>
+      <div id="archiveList">読み込み中...</div>
+    </div>
+
+    <h2 style="margin-top:40px;">データ管理</h2>
+    <div class="import-area">
+      <p style="font-size:12px; color:#666; margin:0 0 10px;">履歴データ(watch-history.json)インポート</p>
+      <input type="file" id="historyFile" accept=".json" style="width:100%;">
+      <button id="importHistoryBtn" class="import-btn">インポート開始</button>
+      <div id="importStatus" style="font-size:12px; margin-top:5px;"></div>
+    </div>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>

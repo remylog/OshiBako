@@ -25,7 +25,7 @@ const db = new sqlite3.Database(dbPath);
 
 // ▼ DB初期化 ▼
 db.serialize(() => {
-  // チャンネル管理（deleted_at カラムを追加してアーカイブに対応）
+  // チャンネル管理
   db.run(`CREATE TABLE IF NOT EXISTS channels (
     id TEXT PRIMARY KEY,
     name TEXT,
@@ -36,7 +36,7 @@ db.serialize(() => {
     deleted_at INTEGER DEFAULT NULL
   )`);
 
-  // videos テーブルに is_pinned カラムを追加
+  // videos テーブル (is_pinned ピン留め機能付き)
   db.run(`CREATE TABLE IF NOT EXISTS videos (
     video_id TEXT PRIMARY KEY,
     channel_id TEXT,
@@ -46,23 +46,14 @@ db.serialize(() => {
     author TEXT,
     published INTEGER,
     created_at INTEGER,
-    is_pinned INTEGER DEFAULT 0  -- ★追加: ピン留めフラグ (0=なし, 1=あり)
+    is_pinned INTEGER DEFAULT 0
   )`);
   
-  // 既存のDBに deleted_at カラムがない場合のマイグレーション（エラー無視）
+  // 既存DBへのカラム追加マイグレーション
   db.run("ALTER TABLE channels ADD COLUMN deleted_at INTEGER DEFAULT NULL", () => {});
+  db.run("ALTER TABLE videos ADD COLUMN is_pinned INTEGER DEFAULT 0", () => {});
 
-  db.run(`CREATE TABLE IF NOT EXISTS videos (
-    video_id TEXT PRIMARY KEY,
-    channel_id TEXT,
-    title TEXT,
-    link TEXT,
-    thumbnail TEXT,
-    author TEXT,
-    published INTEGER,
-    created_at INTEGER
-  )`);
-
+  // 既読管理テーブル
   db.run(`CREATE TABLE IF NOT EXISTS watched (
     video_id TEXT PRIMARY KEY
   )`);
@@ -71,26 +62,20 @@ db.serialize(() => {
 // ▼ 定期実行 (毎日 AM 03:00) ▼
 cron.schedule('0 3 * * *', async () => {
   console.log('🕒 定期処理開始...');
-  
-  // 1. 過去動画取得（アーカイブされていないチャンネルのみ）
   await backfillPastVideos();
   
-  // 2. 7日以上経過したアーカイブチャンネルを完全削除
   const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
   db.run("DELETE FROM channels WHERE deleted_at IS NOT NULL AND deleted_at < ?", [sevenDaysAgo], function(err) {
     if(!err && this.changes > 0) {
       console.log(`🗑️ 保存期間を過ぎた ${this.changes}件のチャンネルを完全削除しました`);
-      // 紐づく動画も削除（任意ですがDB容量節約のため）
       db.run("DELETE FROM videos WHERE channel_id NOT IN (SELECT id FROM channels)");
     }
   });
-
   console.log('✅ 定期処理終了');
 });
 
 async function backfillPastVideos() {
   return new Promise((resolve) => {
-    // deleted_at が NULL のものだけ処理
     db.all("SELECT * FROM channels WHERE is_fully_loaded = 0 AND deleted_at IS NULL", async (err, channels) => {
       if (err || !channels) return resolve();
 
@@ -160,7 +145,6 @@ app.post('/api/channels', async (req, res) => {
       return res.status(400).json({ error: "チャンネルID(UC...) または チャンネルURLを入力してください" });
     }
 
-    // 既にアーカイブにある場合は復元する
     const check = await new Promise(r => db.get("SELECT * FROM channels WHERE id = ?", [channelId], (err, row) => r(row)));
     if (check && check.deleted_at) {
       db.run("UPDATE channels SET deleted_at = NULL, group_name = ? WHERE id = ?", [group || check.group_name, channelId]);
@@ -192,7 +176,6 @@ app.post('/api/channels', async (req, res) => {
   }
 });
 
-// チャンネル一覧 (タイプ分け: active / archived)
 app.get('/api/channels', (req, res) => {
   const type = req.query.type || 'active';
   let query = "SELECT * FROM channels WHERE deleted_at IS NULL";
@@ -206,7 +189,6 @@ app.get('/api/channels', (req, res) => {
   });
 });
 
-// グループ更新API (新規追加)
 app.put('/api/channels/:id', (req, res) => {
   const { group } = req.body;
   db.run("UPDATE channels SET group_name = ? WHERE id = ?", [group, req.params.id], (err) => {
@@ -215,7 +197,6 @@ app.put('/api/channels/:id', (req, res) => {
   });
 });
 
-// アーカイブへ移動 (論理削除)
 app.delete('/api/channels/:id', (req, res) => {
   const now = Date.now();
   db.run("UPDATE channels SET deleted_at = ? WHERE id = ?", [now, req.params.id], (err) => {
@@ -224,7 +205,6 @@ app.delete('/api/channels/:id', (req, res) => {
   });
 });
 
-// 復元API (新規追加)
 app.post('/api/channels/:id/restore', (req, res) => {
   db.run("UPDATE channels SET deleted_at = NULL WHERE id = ?", [req.params.id], (err) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -232,7 +212,6 @@ app.post('/api/channels/:id/restore', (req, res) => {
   });
 });
 
-// 動画一覧 (アクティブなチャンネルのみ)
 app.get('/api/videos', (req, res) => {
   db.all("SELECT * FROM channels WHERE deleted_at IS NULL", [], async (err, channels) => {
     if (!err && channels) {
@@ -266,7 +245,6 @@ app.get('/api/videos', (req, res) => {
     db.all("SELECT video_id FROM watched", [], (err, watchedRows) => {
       const watchedIds = new Set(watchedRows ? watchedRows.map(r => r.video_id) : []);
 
-      // アーカイブされていないチャンネルの動画のみ取得
       const query = `
         SELECT v.*, c.group_name 
         FROM videos v 
@@ -296,6 +274,15 @@ app.post('/api/pin', (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ success: true });
   });
+});
+
+app.post('/api/watched', (req, res) => {
+  const { videoId, isWatched } = req.body;
+  if (isWatched) {
+    db.run("INSERT OR IGNORE INTO watched (video_id) VALUES (?)", [videoId], () => res.json({ success: true }));
+  } else {
+    db.run("DELETE FROM watched WHERE video_id = ?", [videoId], () => res.json({ success: true }));
+  }
 });
 
 app.post('/api/import-history', (req, res) => {

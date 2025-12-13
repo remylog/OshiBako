@@ -37,13 +37,6 @@ async function loadVideos() {
   }
 }
 
-filtered.sort((a, b) => {
-    if (!!a.isPinned === !!b.isPinned) { // 両方ピンあり、または両方なしなら日付順
-      return new Date(b.published) - new Date(a.published); 
-    }
-    return (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0); // ピン留め優先
-  });
-
 function renderVideos() {
   const grid = document.getElementById('videoGrid');
   const status = document.getElementById('status');
@@ -51,14 +44,23 @@ function renderVideos() {
 
   let filtered = allVideos;
   
-  // ★変更点: 複数グループ対応のフィルタリング
+  // グループフィルタリング
   if (currentGroup !== 'all') {
     filtered = allVideos.filter(v => {
-      // "Game, Tech" -> ["Game", "Tech"] に分割してチェック
       const groups = v.group_name.split(',').map(g => g.trim());
       return groups.includes(currentGroup);
     });
   }
+
+  // ★修正: 並び替えコードをここ（関数の中）に移動しました
+  filtered.sort((a, b) => {
+    // 両方ピンあり、または両方なしなら日付順
+    if (!!a.isPinned === !!b.isPinned) {
+      return new Date(b.published) - new Date(a.published); 
+    }
+    // ピン留め優先
+    return (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0);
+  });
 
   const total = filtered.length;
   const display = filtered.slice(0, displayLimit === 9999 ? total : displayLimit);
@@ -67,15 +69,20 @@ function renderVideos() {
 
   display.forEach(video => {
     const card = document.createElement('div');
-    card.className = `video-card ${video.isWatched ? 'watched' : ''}`;
+    // クラス名設定
+    let cardClass = `video-card ${video.isWatched ? 'watched' : ''}`;
+    if (video.isPinned) cardClass += ' pinned-card';
+    card.className = cardClass;
     
     const date = new Date(video.published);
     const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
     const btnText = video.isWatched ? '既読解除' : '閲覧済みにする';
 
-    // バッジをカンマ区切りできれいに表示
+    const groupBadges = video.group_name.split(',').map(g => 
+      `<span class="group-badge">${g.trim()}</span>`
+    ).join(' ');
+
     const pinBtnClass = video.isPinned ? 'pin-btn active' : 'pin-btn';
-    if (video.isPinned) card.classList.add('pinned-card');
 
     card.innerHTML = `
       <div class="card-header">
@@ -101,13 +108,12 @@ function renderVideos() {
       </div>
     `;
 
-    // ▼ ピン留めボタンの処理 ▼
+    // ピン留めボタンの処理
     const pinBtn = card.querySelector('.pin-btn');
     pinBtn.addEventListener('click', async (e) => {
       e.preventDefault(); e.stopPropagation();
       const newPinnedStatus = !pinBtn.classList.contains('active');
       
-      // UI即時反映
       if (newPinnedStatus) {
         pinBtn.classList.add('active');
         card.classList.add('pinned-card');
@@ -116,15 +122,15 @@ function renderVideos() {
         card.classList.remove('pinned-card');
       }
 
-      // サーバー送信
       await fetch('/api/pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ videoId: video.video_id, isPinned: newPinnedStatus })
       });
-      video.isPinned = newPinnedStatus; // データ更新
+      video.isPinned = newPinnedStatus;
     });
     
+    // 既読ボタン処理
     const toggleFunc = async (e) => {
       e.preventDefault(); e.stopPropagation();
       const newStatus = !card.classList.contains('watched');
@@ -136,9 +142,11 @@ function renderVideos() {
       if (newStatus) {
         card.classList.add('watched');
         card.querySelector('.mark-watched-btn').textContent = '既読解除';
+        video.isWatched = true;
       } else {
         card.classList.remove('watched');
         card.querySelector('.mark-watched-btn').textContent = '閲覧済みにする';
+        video.isWatched = false;
       }
     };
 
@@ -155,7 +163,6 @@ function createGroupButtons() {
   const container = document.getElementById('group-buttons');
   container.innerHTML = '<button class="group-btn active" data-group="all">すべて表示</button>';
   
-  // ★変更点: 全動画のグループ名を分解してユニークなリストを作成
   const groupSet = new Set();
   allVideos.forEach(v => {
     v.group_name.split(',').forEach(g => {

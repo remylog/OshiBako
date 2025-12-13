@@ -7,9 +7,7 @@ RUN npm install
 
 COPY . .
 
-# データディレクトリの作成（権限エラー防止）
+# データ保存用ディレクトリ
 RUN mkdir -p data
-
-EXPOSE 3000
 
 CMD ["npm", "start"]

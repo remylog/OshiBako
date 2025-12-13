@@ -5,6 +5,9 @@ const xml2js = require('xml2js');
 const cors = require('cors');
 const path = require('path');
 const cron = require('node-cron');
+const fs = require('fs');
+const { exec } = require('child_process');
+// AI関連のライブラリは削除
 
 const app = express();
 const PORT = 3000;
@@ -12,7 +15,7 @@ const PORT = 3000;
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
 if (!YOUTUBE_API_KEY) {
-  console.error("❌ エラー: APIキーが設定されていません。.envファイルを確認してください。");
+  console.error("❌ エラー: YOUTUBE_API_KEY が設定されていません。");
   process.exit(1);
 }
 
@@ -25,7 +28,6 @@ const db = new sqlite3.Database(dbPath);
 
 // ▼ DB初期化 ▼
 db.serialize(() => {
-  // チャンネル管理
   db.run(`CREATE TABLE IF NOT EXISTS channels (
     id TEXT PRIMARY KEY,
     name TEXT,
@@ -36,7 +38,6 @@ db.serialize(() => {
     deleted_at INTEGER DEFAULT NULL
   )`);
 
-  // videos テーブル (is_pinned ピン留め機能付き)
   db.run(`CREATE TABLE IF NOT EXISTS videos (
     video_id TEXT PRIMARY KEY,
     channel_id TEXT,
@@ -46,14 +47,22 @@ db.serialize(() => {
     author TEXT,
     published INTEGER,
     created_at INTEGER,
-    is_pinned INTEGER DEFAULT 0
+    is_pinned INTEGER DEFAULT 0,
+    description TEXT
+    -- summary, summary_timestamp は削除
   )`);
   
-  // 既存DBへのカラム追加マイグレーション
+  // ★追加: groupsテーブルの作成
+  db.run(`CREATE TABLE IF NOT EXISTS groups (
+    group_name TEXT PRIMARY KEY,
+    channel_ids TEXT
+  )`);
+  
+  // カラム追加マイグレーション (AI関連のカラム参照は削除)
   db.run("ALTER TABLE channels ADD COLUMN deleted_at INTEGER DEFAULT NULL", () => {});
   db.run("ALTER TABLE videos ADD COLUMN is_pinned INTEGER DEFAULT 0", () => {});
+  db.run("ALTER TABLE videos ADD COLUMN description TEXT", () => {});
 
-  // 既読管理テーブル
   db.run(`CREATE TABLE IF NOT EXISTS watched (
     video_id TEXT PRIMARY KEY
   )`);
@@ -83,7 +92,7 @@ async function backfillPastVideos() {
         if (!channel.uploads_id) continue;
 
         try {
-          let apiUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${channel.uploads_id}&maxResults=20&key=${YOUTUBE_API_KEY}`;
+          let apiUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${channel.uploads_id}&maxResults=20&key=${YOUTUBE_API_KEY}`;
           if (channel.next_page_token) {
             apiUrl += `&pageToken=${channel.next_page_token}`;
           }
@@ -97,7 +106,7 @@ async function backfillPastVideos() {
             continue;
           }
 
-          const stmt = db.prepare(`INSERT OR IGNORE INTO videos (video_id, channel_id, title, link, thumbnail, author, published, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+          const stmt = db.prepare(`INSERT OR IGNORE INTO videos (video_id, channel_id, title, link, thumbnail, author, published, created_at, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
           
           for (const item of items) {
             const snippet = item.snippet;
@@ -110,8 +119,9 @@ async function backfillPastVideos() {
             const author = snippet.channelTitle;
             const published = new Date(snippet.publishedAt).getTime();
             const now = Date.now();
+            const description = snippet.description || "";
 
-            stmt.run(videoId, channel.id, title, link, thumbnail, author, published, now);
+            stmt.run(videoId, channel.id, title, link, thumbnail, author, published, now, description);
           }
           stmt.finalize();
 
@@ -132,17 +142,77 @@ async function backfillPastVideos() {
 
 // ▼ APIエンドポイント ▼
 
+// ★追加: カテゴリ（グループ）リストの取得
+app.get('/api/groups', (req, res) => {
+    db.all('SELECT group_name, channel_ids FROM groups', [], (err, rows) => {
+        if (err) {
+            console.error('Database Error (GET /api/groups):', err.message);
+            res.status(500).json({ "error": err.message });
+            return;
+        }
+        res.json(rows);
+    });
+});
+
+// ★追加: カテゴリの追加/更新
+app.post('/api/groups', (req, res) => {
+    const { group_name, channel_ids } = req.body;
+    
+    if (!group_name) {
+        return res.status(400).json({ "error": "カテゴリ名が必要です。" });
+    }
+
+    db.run(
+        `INSERT INTO groups (group_name, channel_ids) 
+         VALUES (?, ?)
+         ON CONFLICT(group_name) DO UPDATE SET channel_ids = excluded.channel_ids`,
+        [group_name, channel_ids || ''],
+        function(err) {
+            if (err) {
+                console.error('Database Error (POST /api/groups):', err.message);
+                return res.status(500).json({ "error": err.message });
+            }
+            res.json({ message: "カテゴリを保存しました。", id: this.lastID });
+        }
+    );
+});
+
+// ★追加: カテゴリの削除
+app.delete('/api/groups/:group_name', (req, res) => {
+    const group_name = req.params.group_name;
+
+    db.run(`DELETE FROM groups WHERE group_name = ?`, group_name, function(err) {
+        if (err) {
+            console.error('Database Error (DELETE /api/groups):', err.message);
+            return res.status(500).json({ "error": err.message });
+        }
+        if (this.changes === 0) {
+            return res.status(404).json({ "error": "指定されたカテゴリが見つかりませんでした。" });
+        }
+        res.json({ message: "カテゴリを削除しました。" });
+    });
+});
+// ★削除: /api/summarize エンドポイント (ここは元々削除済み)
+
 app.post('/api/channels', async (req, res) => {
   const { url, group } = req.body;
   try {
     let channelId = '';
     const cleanUrl = url.trim();
+    // チャンネルIDの抽出ロジックは settings.js 側に寄せるため、ここでは簡略化
+    // ユーザーが ID (UC...) を入力することを期待する
     if (cleanUrl.startsWith('UC')) {
       channelId = cleanUrl;
     } else if (cleanUrl.includes('channel/')) {
       channelId = cleanUrl.split('channel/')[1].split('/')[0];
-    } else {
+    } else if (cleanUrl.includes('@')) {
+      // @user 形式はAPIでIDに変換する必要があるため、一旦ここではエラーとするか、
+      // ユーザーにIDを入力させる前提で進める。
+      // 現状のsettings.js側はURLからIDを抽出するロジックを持っているため、ここではchannelIdのバリデーションに集中する
       return res.status(400).json({ error: "チャンネルID(UC...) または チャンネルURLを入力してください" });
+    } else {
+        // ID以外の形式（@user名など）を直接入力した場合、サーバー側ではIDに解決できないためエラーとする
+        return res.status(400).json({ error: "有効なチャンネルID(UC...) または チャンネルURLを入力してください" });
     }
 
     const check = await new Promise(r => db.get("SELECT * FROM channels WHERE id = ?", [channelId], (err, row) => r(row)));
@@ -231,10 +301,11 @@ app.get('/api/videos', (req, res) => {
               const link = entry.link[0].$.href;
               const thumbnail = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
               const author = entry.author[0].name[0];
+              const description = ""; 
 
-              db.run(`INSERT OR IGNORE INTO videos (video_id, channel_id, title, link, thumbnail, author, published, created_at) 
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                [videoId, channel.id, title, link, thumbnail, author, published, now]
+              db.run(`INSERT OR IGNORE INTO videos (video_id, channel_id, title, link, thumbnail, author, published, created_at, description) 
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [videoId, channel.id, title, link, thumbnail, author, published, now, description]
               );
             }
           }

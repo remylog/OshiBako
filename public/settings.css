@@ -1,50 +1,516 @@
+/* ベースのスタイルは public/style.css から継承します */
 * { box-sizing: border-box; }
 
-body { margin: 0; padding: 0; font-family: "Helvetica Neue", Arial, sans-serif; background-color: #f1f1f1; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
-
-.container {
-  background: white; 
-  padding: 20px; 
-  border-radius: 8px; 
-  max-width: 800px; 
-  margin: 20px auto; 
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-  width: 90%;
+/* 基本設定 */
+body {
+    background-color: #f5f5f7; /* 薄いグレー */
+    color: #1d1d1f; /* 濃い黒 */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-h1 { margin: 0; font-size: 20px; color: #333; }
-.back-btn { text-decoration: none; background: #666; color: white; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; }
+#settings-container {
+    max-width: 800px;
+    margin: 50px auto;
+    padding: 30px;
+    background-color: #ffffff; /* 白い背景のコンテナ */
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.05); /* 控えめな影 */
+    
+    /* 画面高より長くなった場合にスクロールを有効にする */
+    max-height: calc(100vh - 100px); 
+    overflow-y: auto; 
+    
+    -webkit-overflow-scrolling: touch;
+}
 
-.input-group { display: flex; gap: 10px; margin-bottom: 10px; background: #f9f9f9; padding: 15px; border-radius: 8px; flex-wrap: wrap; }
-input { padding: 10px; border: 1px solid #ddd; border-radius: 4px; flex: 1; min-width: 200px; }
-#addChannelBtn, #bulkAddBtn { background: #cc0000; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+/* ヘッダーと戻るボタン */
+header {
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+}
+header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 10px 0 0 0;
+    color: #1d1d1f;
+}
+.back-btn {
+    display: inline-block;
+    color: #007aff; /* Appleのアクセントカラー */
+    text-decoration: none;
+    font-weight: 500;
+    margin-bottom: 10px;
+    transition: color 0.2s;
+}
+.back-btn:hover {
+    color: #006aff;
+}
 
-.import-area { padding: 15px; background: #eef; border-radius: 8px; border: 1px solid #dde; }
-.import-btn { background: #444; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+/* セクション */
+.setting-section {
+    margin-bottom: 40px;
+    padding: 20px;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+}
+.setting-section h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #1d1d1f;
+}
+.setting-section p {
+    color: #888888;
+    font-size: 14px;
+}
 
-.channel-list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; gap: 10px; }
-.channel-info { flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
-.channel-name { font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.group-edit-input { width: 100px; padding: 4px; font-size: 12px; border: 1px solid #ddd; border-radius: 4px; color: #555; }
+/* インプットグループ */
+.input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: stretch;
+}
+.input-group input[type="text"] {
+    flex-grow: 1;
+    padding: 10px 12px;
+    border: 1px solid #d2d2d7;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #1d1d1f;
+    background-color: #ffffff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.input-group input[type="text"]:focus {
+    border-color: #007aff;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+    outline: none;
+}
 
-.btn-area { display: flex; gap: 5px; flex-shrink: 0; }
-.action-btn { font-size: 11px; padding: 6px 10px; border-radius: 4px; cursor: pointer; border: none; }
-.update-btn { background: #eee; color: #333; }
-.delete-btn { background: #fff0f0; color: #cc0000; border: 1px solid #ffcccc; }
-.restore-btn { background: #e6f9e6; color: green; border: 1px solid #ccffcc; }
+/* 通常ボタン */
+.input-group button, .restore-btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 6px;
+    background-color: #1d1d1f; /* 黒ボタン */
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    flex-shrink: 0;
+}
+.input-group button:hover, .restore-btn:hover {
+    background-color: #333333;
+    transform: translateY(-1px);
+}
+.input-group button:active, .restore-btn:active {
+    transform: translateY(0);
+}
 
-h2 { font-size: 16px; margin-bottom: 10px; color: #555; border-left: 4px solid #cc0000; padding-left: 10px; margin-top: 30px; }
-.archive-section { opacity: 0.8; margin-top: 40px; border-top: 2px dashed #ddd; padding-top: 10px; }
 
-/* スマホ用調整 */
+/* データ管理ボタン */
+.data-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+}
+.data-actions button {
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    border: 1px solid #d2d2d7;
+    background: #ffffff;
+    color: #1d1d1f;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+.data-actions button:hover {
+    background-color: #f0f0f0;
+}
+.danger-btn {
+    color: #ff3b30 !important; /* 赤文字 */
+    border-color: #ff3b30 !important;
+}
+.danger-btn:hover {
+    background-color: #ff3b30 !important;
+    color: #ffffff !important;
+}
+
+/* ステータス/メッセージ */
+.status-message {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #888888;
+}
+#apiStatus span {
+    font-weight: 600;
+}
+
+/* リストスタイル (チャンネル/グループ) */
+#channelListWrapper, #groupListWrapper {
+    margin-top: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #f9f9f9; /* リスト背景をわずかにグレーに */
+}
+#channelList, #groupList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid #e0e0e0;
+    transition: background-color 0.2s;
+    width: 100%; 
+}
+.list-item:last-child {
+    border-bottom: none;
+}
+.list-item:not(.deleted):hover {
+    background-color: #e8e8ed; /* ホバーで少し濃いグレー */
+}
+
+.item-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+.channel-name, .group-name {
+    font-weight: 600;
+    font-size: 15px;
+    color: #1d1d1f;
+}
+.channel-id, .channel-ids {
+    font-size: 12px;
+    color: #888888;
+    margin-top: 2px;
+}
+.item-actions {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.delete-btn {
+    padding: 6px 10px;
+    background-color: #ff3b30; /* 赤ボタン */
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.delete-btn:hover {
+    background-color: #d82d2d;
+}
+.restore-btn {
+    padding: 6px 10px;
+    background-color: #007aff; /* 青ボタン */
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    transition: background-color 0.2s;
+}
+.restore-btn:hover {
+    background-color: #006aff;
+}
+
+/* 削除済みアイテムのスタイル */
+.list-item.deleted {
+    background-color: #fcfcfc;
+    opacity: 0.6;
+}
+.deleted-channels-header {
+    padding: 10px 15px;
+    background-color: #e0e0e0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555555;
+}
+
+/* リストが空の場合 */
+.empty-list-item {
+    text-align: center;
+    padding: 20px;
+    color: #a0a0a0;
+    font-style: italic;
+}
+
+/* フッター */
+footer {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+}
+footer p {
+    font-size: 12px;
+    color: #a0a0a0;
+}
+
+/* 紐付け管理セクションのスタイル */
+.association-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #ffffff;
+}
+
+.association-item {
+    /* PC: チャンネル情報 | カテゴリ選択リスト | 保存ボタン */
+    display: grid;
+    grid-template-columns: 200px 1fr 80px; 
+    gap: 15px;
+    padding: 12px 15px;
+    border-bottom: 1px solid #f0f0f0; 
+    align-items: center;
+    transition: background-color 0.2s;
+    position: relative;
+}
+.association-item:last-child {
+    border-bottom: none;
+}
+.association-item:hover {
+    background-color: #f5f5f7;
+}
+
+.association-channel-info {
+    display: flex;
+    flex-direction: column;
+    font-weight: 600;
+    color: #1d1d1f;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.current-groups-display {
+    font-size: 12px;
+    font-weight: 400;
+    color: #007aff; 
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.association-item.saved-success {
+    background-color: #e6f7ff; 
+}
+
+/* カテゴリ選択エリア (最大高さとスクロールを追加) */
+.category-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    
+    max-height: 80px; /* 最大高さを設定 (タグが約2行分) */
+    overflow-y: auto; /* 溢れたらスクロール */
+    padding-right: 5px; 
+}
+
+/* カスタムチェックボックス (トグルスイッチ風デザインを再適用) */
+.category-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border: 1px solid #d2d2d7;
+    border-radius: 14px; 
+    font-size: 13px;
+    cursor: pointer;
+    background-color: #f0f0f0; 
+    color: #444444;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    flex-shrink: 0; 
+}
+
+.category-checkbox-label input[type="checkbox"] {
+    display: none; 
+}
+/* チェック状態のスタイル */
+.category-checkbox-label input[type="checkbox"]:checked + span {
+    color: #ffffff; 
+}
+.category-checkbox-label:has(input[type="checkbox"]:checked) {
+    background-color: #1d1d1f;
+    color: #ffffff;
+    border-color: #1d1d1f;
+}
+.category-checkbox-label:has(input[type="checkbox"]:checked):hover {
+    background-color: #333333;
+}
+
+.category-checkbox-label:hover {
+    background-color: #e0e0e0;
+}
+
+
+/* 保存ボタン (変更なし) */
+.save-association-btn {
+    padding: 8px 12px;
+    background-color: #007aff;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s, opacity 0.2s;
+}
+.save-association-btn:hover {
+    background-color: #006aff;
+    transform: translateY(-1px);
+}
+.association-item.saving .save-association-btn {
+    opacity: 0.7;
+    pointer-events: none;
+}
+.association-item.saved-success .save-association-btn {
+    background-color: #1dc93a; 
+    pointer-events: none;
+}
+
+/* 履歴インポートエリアのスタイル */
+.import-area {
+    margin-top: 25px;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+.import-area p {
+    font-size: 14px;
+    color: #444444;
+    margin-top: 0;
+    font-weight: 500;
+}
+#historyFile {
+    border: none;
+    padding: 10px 0;
+    margin-bottom: 5px;
+    font-size: 13px;
+    color: #444;
+}
+#importHistoryBtn {
+    padding: 8px 15px;
+    border-radius: 6px;
+    background-color: #007aff; 
+    color: #ffffff;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+#importHistoryBtn:hover {
+    background-color: #006aff;
+}
+#importStatus {
+    font-size: 13px;
+    margin-top: 10px;
+    font-weight: 500;
+}
+
+
+/* ▼▼▼ レスポンシブ対応 (モバイル最適化) ▼▼▼ */
+@media (max-width: 840px) {
+    #settings-container {
+        margin: 20px;
+        padding: 15px;
+        max-height: calc(100vh - 40px); /* 上下のマージンを減らした分調整 */
+    }
+    .setting-section {
+        padding: 15px;
+    }
+
+    /* 紐付け管理 */
+    .association-item {
+        grid-template-columns: 1fr 80px;
+        grid-template-rows: auto auto;
+        gap: 10px;
+    }
+    .association-channel-info {
+        grid-column: 1 / 3;
+        margin-bottom: 5px;
+    }
+    .category-selector {
+        grid-column: 1 / 2;
+        max-height: 120px; 
+    }
+    .save-association-btn {
+        grid-column: 2 / 3;
+        grid-row: 2 / 3;
+        align-self: flex-start;
+    }
+}
 @media (max-width: 600px) {
-  .container { margin: 10px auto; width: 95%; padding: 15px; }
-  .input-group { flex-direction: column; }
-  input, button, textarea { width: 100%; box-sizing: border-box; }
-  
-  .channel-list-item { align-items: flex-start; }
-  .channel-info { width: 100%; }
-  .btn-area { margin-top: 5px; align-self: flex-end; }
+    #settings-container {
+        margin: 0; /* マージンを完全に削除 */
+        padding: 15px;
+        border-radius: 0; /* 角丸を削除し、画面いっぱいに */
+        max-width: 100%;
+        min-height: 100vh;
+        max-height: none; /* スマホではページ全体でスクロール */
+    }
+
+    .input-group {
+        flex-direction: column;
+    }
+    .input-group input, .input-group button {
+        width: 100%;
+    }
+    .data-actions {
+        flex-direction: column;
+    }
+    .data-actions button {
+        width: 100%;
+    }
+
+    /* チャンネル/グループリスト */
+    .list-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .item-actions {
+        margin-top: 5px;
+        display: flex; 
+        width: 100%; 
+        justify-content: flex-end; /* ボタンを右寄せ */
+    }
+    .delete-btn, .restore-btn {
+        margin-left: 5px; 
+    }
+    
+    /* 紐付け管理のスマホレイアウト */
+    .association-item {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        gap: 10px;
+        padding: 12px 10px;
+    }
+    .association-channel-info {
+        grid-column: auto;
+    }
+    .category-selector {
+        grid-column: auto;
+        max-height: 100px;
+        width: 100%;
+    }
+    .save-association-btn {
+        grid-column: auto;
+        grid-row: auto;
+        width: 100%;
+    }
 }

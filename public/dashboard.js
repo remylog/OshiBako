@@ -37,6 +37,13 @@ async function loadVideos() {
   }
 }
 
+filtered.sort((a, b) => {
+    if (!!a.isPinned === !!b.isPinned) { // 両方ピンあり、または両方なしなら日付順
+      return new Date(b.published) - new Date(a.published); 
+    }
+    return (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0); // ピン留め優先
+  });
+
 function renderVideos() {
   const grid = document.getElementById('videoGrid');
   const status = document.getElementById('status');
@@ -67,14 +74,16 @@ function renderVideos() {
     const btnText = video.isWatched ? '既読解除' : '閲覧済みにする';
 
     // バッジをカンマ区切りできれいに表示
-    const groupBadges = video.group_name.split(',').map(g => 
-      `<span class="group-badge">${g.trim()}</span>`
-    ).join(' ');
+    const pinBtnClass = video.isPinned ? 'pin-btn active' : 'pin-btn';
+    if (video.isPinned) card.classList.add('pinned-card');
 
     card.innerHTML = `
-      <a href="${video.link}" class="thumb-link" target="_blank">
-        <img src="${video.thumbnail}" loading="lazy">
-      </a>
+      <div class="card-header">
+        <a href="${video.link}" class="thumb-link" target="_blank">
+          <img src="${video.thumbnail}" loading="lazy">
+        </a>
+        <button class="${pinBtnClass}" title="あとで見る（ピン留め）">📌</button>
+      </div>
       <div class="card-content">
         <a href="${video.link}" class="video-title" target="_blank">${video.title}</a>
         <div class="video-meta">
@@ -92,6 +101,30 @@ function renderVideos() {
       </div>
     `;
 
+    // ▼ ピン留めボタンの処理 ▼
+    const pinBtn = card.querySelector('.pin-btn');
+    pinBtn.addEventListener('click', async (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const newPinnedStatus = !pinBtn.classList.contains('active');
+      
+      // UI即時反映
+      if (newPinnedStatus) {
+        pinBtn.classList.add('active');
+        card.classList.add('pinned-card');
+      } else {
+        pinBtn.classList.remove('active');
+        card.classList.remove('pinned-card');
+      }
+
+      // サーバー送信
+      await fetch('/api/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId: video.video_id, isPinned: newPinnedStatus })
+      });
+      video.isPinned = newPinnedStatus; // データ更新
+    });
+    
     const toggleFunc = async (e) => {
       e.preventDefault(); e.stopPropagation();
       const newStatus = !card.classList.contains('watched');

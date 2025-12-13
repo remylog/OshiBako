@@ -35,6 +35,19 @@ db.serialize(() => {
     is_fully_loaded INTEGER DEFAULT 0,
     deleted_at INTEGER DEFAULT NULL
   )`);
+
+  // videos テーブルに is_pinned カラムを追加
+  db.run(`CREATE TABLE IF NOT EXISTS videos (
+    video_id TEXT PRIMARY KEY,
+    channel_id TEXT,
+    title TEXT,
+    link TEXT,
+    thumbnail TEXT,
+    author TEXT,
+    published INTEGER,
+    created_at INTEGER,
+    is_pinned INTEGER DEFAULT 0  -- ★追加: ピン留めフラグ (0=なし, 1=あり)
+  )`);
   
   // 既存のDBに deleted_at カラムがない場合のマイグレーション（エラー無視）
   db.run("ALTER TABLE channels ADD COLUMN deleted_at INTEGER DEFAULT NULL", () => {});
@@ -259,7 +272,7 @@ app.get('/api/videos', (req, res) => {
         FROM videos v 
         JOIN channels c ON v.channel_id = c.id
         WHERE c.deleted_at IS NULL
-        ORDER BY published DESC 
+        ORDER BY v.is_pinned DESC, v.published DESC 
         LIMIT 1000
       `;
       
@@ -267,7 +280,8 @@ app.get('/api/videos', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         const response = videos.map(v => ({
           ...v,
-          isWatched: watchedIds.has(v.video_id)
+          isWatched: watchedIds.has(v.video_id),
+          isPinned: v.is_pinned === 1
         }));
         res.json(response);
       });
@@ -275,13 +289,13 @@ app.get('/api/videos', (req, res) => {
   });
 });
 
-app.post('/api/watched', (req, res) => {
-  const { videoId, isWatched } = req.body;
-  if (isWatched) {
-    db.run("INSERT OR IGNORE INTO watched (video_id) VALUES (?)", [videoId], () => res.json({ success: true }));
-  } else {
-    db.run("DELETE FROM watched WHERE video_id = ?", [videoId], () => res.json({ success: true }));
-  }
+app.post('/api/pin', (req, res) => {
+  const { videoId, isPinned } = req.body;
+  const val = isPinned ? 1 : 0;
+  db.run("UPDATE videos SET is_pinned = ? WHERE video_id = ?", [val, videoId], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
 });
 
 app.post('/api/import-history', (req, res) => {

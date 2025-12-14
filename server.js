@@ -7,16 +7,17 @@ const path = require('path');
 const cron = require('node-cron');
 const fs = require('fs');
 const { exec } = require('child_process');
-// AI関連のライブラリは削除
 
 const app = express();
 const PORT = 3000;
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
+// サーバー起動時のキー存在チェックはそのまま維持
 if (!YOUTUBE_API_KEY) {
   console.error("❌ エラー: YOUTUBE_API_KEY が設定されていません。");
-  process.exit(1);
+  // サーバーの起動は続行せず、終了
+  process.exit(1); 
 }
 
 app.use(cors());
@@ -49,16 +50,13 @@ db.serialize(() => {
     created_at INTEGER,
     is_pinned INTEGER DEFAULT 0,
     description TEXT
-    -- summary, summary_timestamp は削除
   )`);
 
-  // ★追加: groupsテーブルの作成
   db.run(`CREATE TABLE IF NOT EXISTS groups (
     group_name TEXT PRIMARY KEY,
     channel_ids TEXT
   )`);
 
-  // カラム追加マイグレーション (AI関連のカラム参照は削除)
   db.run("ALTER TABLE channels ADD COLUMN deleted_at INTEGER DEFAULT NULL", () => { });
   db.run("ALTER TABLE videos ADD COLUMN is_pinned INTEGER DEFAULT 0", () => { });
   db.run("ALTER TABLE videos ADD COLUMN description TEXT", () => { });
@@ -142,7 +140,41 @@ async function backfillPastVideos() {
 
 // ▼ APIエンドポイント ▼
 
-// ★追加: カテゴリ（グループ）リストの取得
+// ★修正: APIキーの有効性をチェックするエンドポイント
+app.get('/api/status', async (req, res) => {
+  // YOUTUBE_API_KEYが環境変数に設定されていない場合（サーバー起動時に既にチェックされているはずだが、念のため）
+  if (!YOUTUBE_API_KEY) {
+    return res.json({ youtube_api_available: false, reason: "Key not configured" });
+  }
+
+  // 既知の公開チャンネルID（Google Developers）を使って、最小限のAPIコールを試行
+  const testChannelId = 'UC_x5XG1OV2P6uZZ5FSM9Ttw';
+  const testUrl = `https://www.googleapis.com/youtube/v3/channels?part=id&id=${testChannelId}&key=${YOUTUBE_API_KEY}`;
+
+  try {
+    // 成功するとstatus 200が返る
+    const testRes = await axios.get(testUrl);
+    
+    // 正常な応答が確認できれば、キーは有効
+    if (testRes.status === 200 && testRes.data && testRes.data.items && testRes.data.items.length > 0) {
+        return res.json({ youtube_api_available: true });
+    }
+    
+    // 正常に通信できたがデータが空だった場合（通常ありえないが、念のため無効扱い）
+    return res.json({ youtube_api_available: false, reason: "Empty response" });
+
+  } catch (error) {
+    // APIキーが無効な場合、通常 400 (Bad Request) または 403 (Forbidden) が返る
+    if (error.response && (error.response.status === 400 || error.response.status === 403)) {
+      // 認証エラーやAPIキーのエラーは無効と判断
+      return res.json({ youtube_api_available: false, reason: "API Key Invalid or Quota Exceeded" });
+    }
+    
+    // その他のネットワークエラーなどは不明なエラーとして処理
+    return res.json({ youtube_api_available: false, reason: "Network or unknown error" });
+  }
+});
+
 app.get('/api/groups', (req, res) => {
   db.all('SELECT group_name, channel_ids FROM groups', [], (err, rows) => {
     if (err) {
@@ -154,7 +186,6 @@ app.get('/api/groups', (req, res) => {
   });
 });
 
-// ★追加: カテゴリの追加/更新
 app.post('/api/groups', (req, res) => {
   const { group_name, channel_ids } = req.body;
 
@@ -177,7 +208,6 @@ app.post('/api/groups', (req, res) => {
   );
 });
 
-// ★追加: カテゴリの削除
 app.delete('/api/groups/:group_name', (req, res) => {
   const group_name = req.params.group_name;
 
@@ -192,26 +222,17 @@ app.delete('/api/groups/:group_name', (req, res) => {
     res.json({ message: "カテゴリを削除しました。" });
   });
 });
-// ★削除: /api/summarize エンドポイント (ここは元々削除済み)
 
 app.post('/api/channels', async (req, res) => {
   const { url, group } = req.body;
   try {
     let channelId = '';
     const cleanUrl = url.trim();
-    // チャンネルIDの抽出ロジックは settings.js 側に寄せるため、ここでは簡略化
-    // ユーザーが ID (UC...) を入力することを期待する
     if (cleanUrl.startsWith('UC')) {
       channelId = cleanUrl;
     } else if (cleanUrl.includes('channel/')) {
       channelId = cleanUrl.split('channel/')[1].split('/')[0];
-    } else if (cleanUrl.includes('@')) {
-      // @user 形式はAPIでIDに変換する必要があるため、一旦ここではエラーとするか、
-      // ユーザーにIDを入力させる前提で進める。
-      // 現状のsettings.js側はURLからIDを抽出するロジックを持っているため、ここではchannelIdのバリデーションに集中する
-      return res.status(400).json({ error: "チャンネルID(UC...) または チャンネルURLを入力してください" });
     } else {
-      // ID以外の形式（@user名など）を直接入力した場合、サーバー側ではIDに解決できないためエラーとする
       return res.status(400).json({ error: "有効なチャンネルID(UC...) または チャンネルURLを入力してください" });
     }
 

@@ -1,31 +1,23 @@
-/* ★重要: 全要素のはみ出しを防止する設定 */
 * {
     box-sizing: border-box;
 }
 
-/* ベース設定 (Apple風: 白背景、黒文字、ゴシック体) */
 body {
     margin: 0;
     padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     background-color: #f5f5f7;
-    /* 薄いグレー（Apple風） */
     color: #1d1d1f;
-    /* 濃い黒（Apple風） */
     display: flex;
     flex-direction: column;
-    /* bodyを縦に並べる（ヘッダーとコンテンツ） */
     height: 100vh;
     height: 100dvh;
     overflow: hidden;
-    /* 全体のスクロールはコンテンツラッパーに任せる */
 }
 
-/* ★NEW: 固定ヘッダーのスタイル */
 #header {
     width: 100%;
     height: 60px;
-    /* 高さ固定 */
     background-color: #ffffff;
     border-bottom: 1px solid #e0e0e0;
 
@@ -35,7 +27,6 @@ body {
     padding: 0 20px;
 
     flex-shrink: 0;
-    /* 縮まないように固定 */
     z-index: 1000;
 }
 
@@ -53,7 +44,6 @@ body {
     gap: 15px;
 }
 
-/* PC版の件数選択 (header内) */
 .pc-limit-select {
     padding: 8px;
     border-radius: 6px;
@@ -68,7 +58,6 @@ body {
     border-color: #007aff;
 }
 
-/* アクションボタン (header内) */
 .action-btn {
     padding: 8px 15px;
     border-radius: 6px;
@@ -105,37 +94,30 @@ body {
     transform: translateY(-1px);
 }
 
-/* スマホ版ヘッダー要素はPCでは非表示 */
 .mobile-limit-select-container {
     display: none;
 }
 
-
-/* ★NEW: コンテンツラッパー (メインコンテンツ全体) */
 #content-wrapper {
     display: flex;
     flex: 1;
-    /* 残りの高さをすべて取る */
     overflow: hidden;
-    /* コンテンツラッパー内でスクロールを制御 */
 }
 
-/* ★NEW: カテゴリサイドバー (PC版のみ表示) */
-#category-sidebar {
+/* ★修正: #category-sidebar を #group-sidebar に変更 */
+#group-sidebar {
     width: 250px;
     background-color: #ffffff;
     border-right: 1px solid #e0e0e0;
     padding: 0;
-    /* タイトルとグループボタンがパディングを持つ */
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
     overflow-y: hidden;
-    /* h2とgroup-buttonsの外側はスクロールしない */
 }
 
-/* ★追加: カテゴリリストのタイトル */
-#category-sidebar h2 {
+/* ★修正: #category-sidebar h2 を #group-sidebar h2 に変更 */
+#group-sidebar h2 {
     font-size: 15px;
     font-weight: 700;
     color: #444444;
@@ -146,8 +128,6 @@ body {
     letter-spacing: 0.5px;
 }
 
-
-/* PC: カテゴリボタン (サイドバーの縦リスト) */
 #group-buttons {
     flex: 1;
     display: flex;
@@ -155,11 +135,10 @@ body {
     padding-bottom: 10px;
     margin: 0;
     overflow-y: auto;
-    /* カテゴリリスト自体をスクロール可能に */
 }
 
-/* 縦リストのラッパー */
-#category-button-wrapper-vertical {
+/* ★修正: #category-button-wrapper-vertical を #group-button-wrapper-vertical に変更 */
+#group-button-wrapper-vertical {
     display: flex;
     flex-direction: column;
     padding: 0 10px;
@@ -170,8 +149,8 @@ body {
     padding: 0 10px 0 10px;
 }
 
-/* 縦リスト用のカテゴリボタンのスタイル */
-.category-btn-list {
+/* ★修正: .category-btn-list を .group-btn-list に変更 */
+.group-btn-list {
     display: block;
     width: 100%;
     padding: 10px 15px;
@@ -185,23 +164,22 @@ body {
     transition: background-color 0.2s;
 }
 
-.category-btn-list:hover {
+/* ★修正: .category-btn-list:hover を .group-btn-list:hover に変更 */
+.group-btn-list:hover {
     background-color: #f0f0f0;
 }
 
-.category-btn-list.active {
+/* ★修正: .category-btn-list.active を .group-btn-list.active に変更 */
+.group-btn-list.active {
     background-color: #e0e0e0;
     color: #1d1d1f;
     font-weight: 600;
 }
 
-
-/* メインエリア */
 #main {
     flex: 1;
-    padding: 15px 30px;
+    padding: 5px 30px;
     overflow-y: auto;
-    /* 動画グリッドエリアをスクロール可能に */
     position: relative;
     background-color: #ffffff;
 }
@@ -219,12 +197,9 @@ body {
     gap: 24px;
 }
 
-
-/* チャンネルアイコンリストのラッパー (メインエリア上部) */
 #channelListWrapper {
     display: block;
     flex-shrink: 0;
-    /* ★修正: 動画グリッドとの間隔を調整 */
     margin-bottom: 30px;
     margin-top: 0;
     overflow: hidden;
@@ -239,16 +214,14 @@ body {
     scrollbar-width: none;
     border-bottom: 1px solid #e0e0e0;
 
-    /* mainのパディング外まで伸ばすためにマージンを負の値に */
     margin: 0 -30px;
-    padding: 5px 30px 15px 30px;
+    padding: 15px 30px 15px 30px;
 }
 
 #channel-icon-list::-webkit-scrollbar {
     display: none;
 }
 
-/* チャンネルリストのボタン形式スタイル (PC用) */
 .channel-list-button {
     flex-shrink: 0;
     cursor: pointer;
@@ -288,7 +261,6 @@ body {
     color: white;
 }
 
-/* --- 動画カード関連のスタイル (変更なし) --- */
 .card-header {
     position: relative;
     overflow: hidden;
@@ -433,13 +405,7 @@ body {
     border-color: #e0e0e0;
 }
 
-/* --- 動画カード関連のスタイル終了 --- */
-
-
-/* ▼▼▼ スマホ用レスポンシブ設定 (768px以下) ▼▼▼ */
 @media (max-width: 768px) {
-
-    /* bodyの固定を解除し、ページ全体をスクロール可能にする */
     body {
         flex-direction: column;
         height: auto;
@@ -447,7 +413,6 @@ body {
         overflow: auto;
     }
 
-    /* ヘッダーを固定化から解除 */
     #header {
         position: static;
         height: auto;
@@ -457,12 +422,10 @@ body {
         border-bottom: 1px solid #e0e0e0;
     }
 
-    /* PC版アクションは非表示 */
     .header-actions {
         display: none;
     }
 
-    /* モバイル版アクションを表示 */
     .mobile-limit-select-container {
         display: flex;
         gap: 8px;
@@ -470,15 +433,14 @@ body {
         padding-right: 0;
     }
 
-    /* コンテンツラッパーは表示させない */
     #content-wrapper {
         display: block;
         flex: none;
         overflow: visible;
     }
 
-    /* カテゴリサイドバーは非表示 */
-    #category-sidebar {
+    /* ★修正: #category-sidebar を #group-sidebar に変更 */
+    #group-sidebar {
         display: none;
     }
 
@@ -488,12 +450,10 @@ body {
         overflow-y: visible;
     }
 
-    /* カテゴリバー (スマホ) - 非表示 */
     #group-buttons {
         display: none;
     }
 
-    /* チャンネルリスト (スマホ) - ヘッダー直下に移動 */
     #channelListWrapper {
         display: block;
         width: 100%;
@@ -501,7 +461,6 @@ body {
         padding: 0;
         margin-top: 5px;
         margin-bottom: 15px;
-        /* モバイル版の間隔調整 */
     }
 
     #channel-icon-list {
@@ -510,29 +469,25 @@ body {
         white-space: nowrap;
         gap: 10px;
         border-bottom: 1px solid #e0e0e0;
-
-        /* margin: 0;  */
-        padding: 5px 15px 15px 15px;
-        /* モバイル版のパディングを左右15pxに調整 */
     }
 
-    /* モバイルチャンネルリストのボタンデザイン */
     .channel-list-button {
         -webkit-tap-highlight-color: transparent;
     }
 
-    /* タップ時の白いハイライトを防止 */
     .channel-list-button:active {
-        /* 未選択時 */
         background-color: #d2d2d7;
         border-color: #d2d2d7;
     }
 
     .channel-list-button.active:active {
-        /* 選択時 */
         background-color: #333333;
         color: white;
         border-color: #333333;
+    }
+
+    .channel-list-button:hover {
+        background-color: #e0e0e0;
     }
 
     .video-grid {

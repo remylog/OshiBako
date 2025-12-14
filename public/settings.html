@@ -1,91 +1,105 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>設定 - YouTube Dashboard</title>
+    <title>YouTube Dashboard 設定</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%BA%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="settings.css">
-    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+
     <div id="settings-container">
+        
         <header>
             <a href="/" class="back-btn">← ダッシュボードへ戻る</a>
-            <h1>⚙️ 設定</h1>
+            <h1>設定</h1>
         </header>
 
-        <section id="api-settings" class="setting-section">
-            <h2>API設定</h2>
-            <p>サーバー側の環境変数で設定されます。</p>
-            <div id="apiStatus">APIキーの状態: 取得中...</div>
-        </section>
+        <div id="settings-layout">
+            
+            <nav id="tabs">
+                <button class="tab-btn active" data-tab="channels">📺 チャンネル管理</button>
+                <button class="tab-btn" data-tab="groups">📂 グループ管理</button>
+                <button class="tab-btn" data-tab="data">🔗 紐付け・データ管理</button>
+            </nav>
 
-        <section id="channel-management" class="setting-section">
-            <h2>1. チャンネル登録・削除</h2>
+            <div id="tab-content">
+                
+                <div id="channels" class="tab-pane active">
+                    <div class="setting-section api-status-section">
+                        <h2>YouTube API設定</h2>
+                        <p id="apiStatus" class="status-message">APIキーの状態: 確認中...</p>
+                        <p class="description">無効な場合、チャンネル登録や動画更新が行えません。`.env`のキーを確認してください。</p>
+                    </div>
 
-            <div class="input-group">
-                <input type="text" id="channelIdInput" placeholder="チャンネルIDまたはURLを入力">
-                <button id="addChannelBtn">チャンネル追加</button>
+                    <div class="setting-section">
+                        <h2>チャンネルの追加/削除</h2>
+                        <div class="input-group">
+                            <input type="text" id="channelIdInput" placeholder="チャンネルID (UC...) または チャンネルURL">
+                            <button id="addChannelBtn">追加</button>
+                        </div>
+                        <p id="channelStatus" class="status-message"></p>
+                        <div id="channelListWrapper">
+                            <ul id="channelList">
+                                </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="groups" class="tab-pane">
+                    <div class="setting-section">
+                        <h2>グループの追加/削除</h2>
+                        <div class="input-group">
+                            <input type="text" id="groupNameInput" placeholder="新しいグループ名">
+                            <button id="addGroupBtn">追加</button>
+                        </div>
+                        <p id="groupStatus" class="status-message"></p>
+                        <div id="groupListWrapper">
+                            <ul id="groupList">
+                                </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="data" class="tab-pane">
+                    
+                    <div class="setting-section">
+                        <h2>チャンネルとグループの紐付け</h2>
+                        <p id="associationStatus" class="status-message">データ読み込み中...</p>
+                        <div id="channelAssociationList">
+                            </div>
+                    </div>
+
+                    <div class="setting-section">
+                        <h2>既読履歴のインポート</h2>
+                        <div class="import-area">
+                            <p>YouTubeの履歴データ (history.json) をインポートし、動画を既読扱いにします。</p>
+                            <input type="file" id="historyFile" accept=".json">
+                            <button id="importHistoryBtn">インポート開始</button>
+                            <p id="importStatus" class="status-message"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-section">
+                        <h2>メンテナンス</h2>
+                        <div class="data-actions">
+                            <button id="clearCacheBtn">動画キャッシュをクリア</button>
+                            <button id="resetAllBtn" class="danger-btn">全ての設定とデータをリセット</button>
+                        </div>
+                        <p class="status-message">動画キャッシュクリア後、最新のデータがYouTubeから取得されます。</p>
+                    </div>
+                </div>
+
             </div>
-
-            <div id="channelListWrapper">
-                <ul id="channelList">
-                </ul>
-            </div>
-            <div id="channelStatus" class="status-message"></div>
-        </section>
-
-        <section id="group-management" class="setting-section">
-            <h2>2. カテゴリ（グループ）追加・削除</h2>
-            <p>動画に付与するカテゴリ名を作成・管理します。</p>
-
-            <div class="input-group">
-                <input type="text" id="groupNameInput" placeholder="新しいカテゴリ名（例: ゲーム、音楽）">
-                <button id="addGroupBtn">カテゴリ追加</button>
-            </div>
-
-            <div id="groupListWrapper">
-                <ul id="groupList">
-                </ul>
-            </div>
-            <div id="groupStatus" class="status-message"></div>
-        </section>
-
-        <section id="association-management" class="setting-section">
-            <h2>3. チャンネルとカテゴリの紐付け管理</h2>
-            <p>登録チャンネルごとに、該当するカテゴリを複数選択して紐付けます。</p>
-
-            <div id="associationManager">
-                <div id="channelAssociationList"></div>
-            </div>
-            <div id="associationStatus" class="status-message"></div>
-        </section>
-
-        <section id="data-management" class="setting-section">
-            <h2>データ管理</h2>
-            <p>データベースに保存されている動画データに対する操作です。</p>
-
-            <div class="data-actions">
-                <button id="clearCacheBtn" class="danger-btn">動画キャッシュをクリア</button>
-                <button id="resetAllBtn" class="danger-btn">全ての設定とデータをリセット</button>
-            </div>
-
-            <div class="import-area">
-                <p>履歴データ(watch-history.json)をインポート</p>
-                <input type="file" id="historyFile" accept=".json" style="width:100%;">
-                <button id="importHistoryBtn">インポート開始</button>
-                <div id="importStatus" class="status-message"></div>
-            </div>
-        </section>
-
-        <footer>
-            <p>&copy; YouTube Dashboard</p>
-        </footer>
+        </div>
+        
     </div>
+
+    <footer>
+        <p>YouTube Dashboard | Data managed locally</p>
+    </footer>
 
     <script src="settings.js"></script>
 </body>
-
 </html>

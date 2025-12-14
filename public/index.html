@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>YouTube Dashboard</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📺</text></svg>">
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>YouTube Dashboard</title>
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-    
+
     <header id="header">
         <h1>📺 Dashboard</h1>
-        
+
         <div class="header-actions">
             <select id="limitSelect" class="pc-limit-select">
                 <option value="25">最新 25件</option>
@@ -22,9 +23,11 @@
             <button id="refreshBtn" class="action-btn">🔄 更新</button>
             <a href="/settings.html" id="settingsLink" class="action-btn">⚙️ 設定</a>
         </div>
-        
+
         <div class="mobile-limit-select-container">
-            <select class="mobile-limit-select" onchange="document.getElementById('limitSelect').value = this.value; document.getElementById('limitSelect').dispatchEvent(new Event('change'));" style="padding:6px; border-radius:4px; border:1px solid #ddd; font-size:12px; background:white;">
+            <select class="mobile-limit-select"
+                onchange="document.getElementById('limitSelect').value = this.value; document.getElementById('limitSelect').dispatchEvent(new Event('change'));"
+                style="padding:6px; border-radius:4px; border:1px solid #ddd; font-size:12px; background:white;">
                 <option value="25">25件</option>
                 <option value="50">50件</option>
                 <option value="100">100件</option>
@@ -35,36 +38,37 @@
     </header>
 
     <div id="content-wrapper">
-        
+
         <div id="category-sidebar">
             <h2>カテゴリ</h2>
             <div id="group-buttons">
             </div>
         </div>
-        
+
         <div id="main">
-            
+
             <div id="channelListWrapper">
             </div>
-            
+
             <div id="status" style="font-size:12px; text-align:right;">準備完了</div>
-            
+
             <div id="videoGrid" class="video-grid"></div>
         </div>
     </div>
 
 
-  <script src="dashboard.js"></script>
-  <script>
-    // スマホとPCのセレクトボックス同期など
-    const limitSelect = document.getElementById('limitSelect');
-    const mobileSelect = document.querySelector('.mobile-limit-select');
-    if(limitSelect && mobileSelect) {
-        mobileSelect.value = limitSelect.value;
-        limitSelect.addEventListener('change', () => { mobileSelect.value = limitSelect.value; });
-    }
-    // ウィンドウサイズによる表示制御 (今回はCSSで制御)
-    // const handleResize = () => { /* ... */ };
-  </script>
+    <script src="dashboard.js"></script>
+    <script>
+        // スマホとPCのセレクトボックス同期など
+        const limitSelect = document.getElementById('limitSelect');
+        const mobileSelect = document.querySelector('.mobile-limit-select');
+        if (limitSelect && mobileSelect) {
+            mobileSelect.value = limitSelect.value;
+            limitSelect.addEventListener('change', () => { mobileSelect.value = limitSelect.value; });
+        }
+        // ウィンドウサイズによる表示制御 (今回はCSSで制御)
+        // const handleResize = () => { /* ... */ };
+    </script>
 </body>
+
 </html>

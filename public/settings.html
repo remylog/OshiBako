@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>設定 - YouTube Dashboard</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙️</text></svg>">
     <link rel="stylesheet" href="settings.css">
-    <link rel="stylesheet" href="style.css"> </head>
+    <link rel="stylesheet" href="style.css">
+</head>
+
 <body>
     <div id="settings-container">
         <header>
@@ -22,15 +24,15 @@
 
         <section id="channel-management" class="setting-section">
             <h2>1. チャンネル登録・削除</h2>
-            
+
             <div class="input-group">
                 <input type="text" id="channelIdInput" placeholder="チャンネルIDまたはURLを入力">
                 <button id="addChannelBtn">チャンネル追加</button>
             </div>
-            
+
             <div id="channelListWrapper">
                 <ul id="channelList">
-                    </ul>
+                </ul>
             </div>
             <div id="channelStatus" class="status-message"></div>
         </section>
@@ -38,15 +40,15 @@
         <section id="group-management" class="setting-section">
             <h2>2. カテゴリ（グループ）追加・削除</h2>
             <p>動画に付与するカテゴリ名を作成・管理します。</p>
-            
+
             <div class="input-group">
                 <input type="text" id="groupNameInput" placeholder="新しいカテゴリ名（例: ゲーム、音楽）">
                 <button id="addGroupBtn">カテゴリ追加</button>
             </div>
-            
+
             <div id="groupListWrapper">
                 <ul id="groupList">
-                    </ul>
+                </ul>
             </div>
             <div id="groupStatus" class="status-message"></div>
         </section>
@@ -60,11 +62,11 @@
             </div>
             <div id="associationStatus" class="status-message"></div>
         </section>
-        
+
         <section id="data-management" class="setting-section">
             <h2>データ管理</h2>
             <p>データベースに保存されている動画データに対する操作です。</p>
-            
+
             <div class="data-actions">
                 <button id="clearCacheBtn" class="danger-btn">動画キャッシュをクリア</button>
                 <button id="resetAllBtn" class="danger-btn">全ての設定とデータをリセット</button>
@@ -85,4 +87,5 @@
 
     <script src="settings.js"></script>
 </body>
+
 </html>

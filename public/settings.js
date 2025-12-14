@@ -9,11 +9,11 @@ document.addEventListener('DOMContentLoaded', () => {
 // 各種ボタンにイベントリスナーを設定
 function initSettingsUI() {
     document.getElementById('addChannelBtn').addEventListener('click', addChannel);
-    document.getElementById('addGroupBtn').addEventListener('click', addGroup); 
+    document.getElementById('addGroupBtn').addEventListener('click', addGroup);
     document.getElementById('clearCacheBtn').addEventListener('click', clearVideoCache);
     document.getElementById('resetAllBtn').addEventListener('click', resetAllData);
     // ★追加: 履歴インポートボタンのリスナー
-    document.getElementById('importHistoryBtn').addEventListener('click', importHistory); 
+    document.getElementById('importHistoryBtn').addEventListener('click', importHistory);
 }
 
 // データの読み込み
@@ -53,9 +53,9 @@ async function fetchChannels() {
     try {
         const res = await fetch('/api/channels');
         if (!res.ok) throw new Error('Failed to fetch channels');
-        
+
         allChannels = await res.json();
-        
+
         const activeChannels = allChannels.filter(c => !c.deleted_at);
         const deletedChannels = allChannels.filter(c => c.deleted_at);
 
@@ -68,18 +68,18 @@ async function fetchChannels() {
             });
             status.textContent = `現在 ${activeChannels.length} チャンネルが登録されています。`;
         }
-        
+
         if (deletedChannels.length > 0) {
             const deletedHeader = document.createElement('li');
             deletedHeader.className = 'deleted-channels-header';
             deletedHeader.textContent = `--- 削除済みチャンネル (${deletedChannels.length}) ---`;
             list.appendChild(deletedHeader);
-            
+
             deletedChannels.forEach(channel => {
                 list.appendChild(createChannelListItem(channel, true));
             });
         }
-        
+
     } catch (e) {
         status.textContent = `チャンネル取得エラー: ${e.message}`;
         console.error("Channel Fetch Error:", e);
@@ -90,7 +90,7 @@ async function fetchChannels() {
 function createChannelListItem(channel, isDeleted = false) {
     const li = document.createElement('li');
     li.className = `list-item ${isDeleted ? 'deleted' : ''}`;
-    
+
     const infoDiv = document.createElement('div');
     infoDiv.className = 'item-info';
     infoDiv.innerHTML = `
@@ -131,7 +131,7 @@ async function addChannel() {
         status.textContent = 'チャンネルIDまたはURLを入力してください。';
         return;
     }
-    
+
     const id = extractChannelId(channelId);
     if (!id) {
         status.textContent = '無効なチャンネルIDまたはURLです。';
@@ -142,7 +142,7 @@ async function addChannel() {
         const res = await fetch('/api/channels', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: channelId, group: '未分類' }) 
+            body: JSON.stringify({ url: channelId, group: '未分類' })
         });
 
         const data = await res.json();
@@ -214,9 +214,9 @@ async function fetchGroups() {
     try {
         const res = await fetch('/api/groups');
         if (!res.ok) throw new Error('Failed to fetch groups');
-        
+
         allGroups = await res.json();
-        
+
         if (allGroups.length === 0) {
             list.innerHTML = '<li class="empty-list-item">登録されているカテゴリはありません。</li>';
             status.textContent = '';
@@ -226,7 +226,7 @@ async function fetchGroups() {
             });
             status.textContent = `現在 ${allGroups.length} カテゴリが登録されています。`;
         }
-        
+
     } catch (e) {
         status.textContent = `カテゴリ取得エラー: ${e.message}`;
         console.error("Group Fetch Error:", e);
@@ -241,7 +241,7 @@ function createGroupListItem(group) {
     const infoDiv = document.createElement('div');
     infoDiv.className = 'item-info';
     infoDiv.innerHTML = `<span class="group-name">${group.group_name}</span>`;
-    
+
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'item-actions';
 
@@ -253,7 +253,7 @@ function createGroupListItem(group) {
 
     li.appendChild(infoDiv);
     li.appendChild(actionsDiv);
-    
+
     return li;
 }
 
@@ -315,14 +315,14 @@ function manageAssociations() {
     const container = document.getElementById('channelAssociationList');
     const status = document.getElementById('associationStatus');
     container.innerHTML = '';
-    
+
     const activeChannels = allChannels.filter(c => !c.deleted_at);
-    
+
     if (activeChannels.length === 0) {
         container.innerHTML = '<p style="text-align:center; padding: 20px;">登録チャンネルがありません。</p>';
         return;
     }
-    
+
     if (allGroups.length === 0) {
         container.innerHTML = '<p style="text-align:center; padding: 20px;">カテゴリがありません。カテゴリ追加セクションで作成してください。</p>';
         return;
@@ -352,12 +352,12 @@ function createAssociationListItem(channel) {
     // 1. チャンネル情報 (名前と現在の紐付け)
     const infoDiv = document.createElement('div');
     infoDiv.className = 'association-channel-info';
-    
+
     // 現在の紐付け状態を表示
     const currentGroupsDisplay = document.createElement('span');
     currentGroupsDisplay.className = 'current-groups-display';
     currentGroupsDisplay.textContent = currentGroups.length > 0 ? currentGroups.join(', ') : '紐付けなし';
-    
+
     infoDiv.innerHTML = `<span class="channel-name">${channel.name}</span>`;
     infoDiv.appendChild(currentGroupsDisplay);
 
@@ -365,11 +365,11 @@ function createAssociationListItem(channel) {
     // 2. カテゴリ選択チェックボックスリスト
     const categorySelector = document.createElement('div');
     categorySelector.className = 'category-selector'; // CSSで最大高さを設定
-    
+
     allGroups.forEach(group => {
         const groupName = group.group_name;
         const checkboxId = `cb-${channel.id}-${groupName}`;
-        
+
         const label = document.createElement('label');
         label.className = 'category-checkbox-label';
         label.htmlFor = checkboxId;
@@ -379,13 +379,13 @@ function createAssociationListItem(channel) {
         checkbox.id = checkboxId;
         checkbox.value = groupName;
         checkbox.checked = currentGroups.includes(groupName);
-        
+
         label.appendChild(checkbox);
         // ラベルのテキストを span で囲み、CSSで装飾しやすくする
         const labelText = document.createElement('span');
         labelText.textContent = groupName;
         label.appendChild(labelText);
-        
+
         categorySelector.appendChild(label);
     });
 
@@ -406,12 +406,12 @@ function createAssociationListItem(channel) {
 async function saveChannelAssociation(channelId, listItem) {
     // 選択された全てのチェックボックスの値をカンマ区切りで取得
     const selectedGroups = Array.from(listItem.querySelectorAll('input[type="checkbox"]:checked'))
-                                .map(cb => cb.value)
-                                .join(',');
-    
+        .map(cb => cb.value)
+        .join(',');
+
     const status = document.getElementById('associationStatus');
     const originalText = listItem.querySelector('.save-association-btn').textContent;
-    
+
     listItem.classList.add('saving');
     listItem.querySelector('.save-association-btn').textContent = '保存中...';
 
@@ -427,14 +427,14 @@ async function saveChannelAssociation(channelId, listItem) {
             status.textContent = `✅ チャンネルの紐付けを保存しました。`;
             listItem.querySelector('.save-association-btn').textContent = '保存済み';
             listItem.classList.add('saved-success');
-            
+
             // 1秒後に元の状態に戻し、データを再読み込みして最新の紐付け状態を反映
             setTimeout(() => {
                 listItem.classList.remove('saved-success');
                 listItem.querySelector('.save-association-btn').textContent = originalText;
-                loadData(); 
+                loadData();
             }, 1000);
-            
+
         } else {
             status.textContent = `❌ 保存エラー: ${data.error || '不明なエラー'}`;
             listItem.querySelector('.save-association-btn').textContent = 'エラー';
@@ -497,41 +497,41 @@ async function resetAllData() {
         btn.textContent = '全ての設定とデータをリセット';
         btn.disabled = false;
         // リセット後、画面を再読み込み
-        window.location.reload(); 
+        window.location.reload();
     }
 }
 
 // ★追加: 履歴インポート
 async function importHistory() {
-  const fileInput = document.getElementById('historyFile');
-  const status = document.getElementById('importStatus');
-  if (!fileInput.files[0]) return;
-  status.textContent = "読み込み中...";
-  status.style.color = "#888888"; 
+    const fileInput = document.getElementById('historyFile');
+    const status = document.getElementById('importStatus');
+    if (!fileInput.files[0]) return;
+    status.textContent = "読み込み中...";
+    status.style.color = "#888888";
 
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    try {
-      const json = JSON.parse(e.target.result);
-      status.textContent = `送信中 (${json.length}件)...`;
-      
-      const res = await fetch('/api/import-history', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: e.target.result // Send raw text content
-      });
-      const d = await res.json();
-      if (d.success) {
-        status.textContent = `✅ ${d.count}件インポート完了`;
-        status.style.color = "#1dc93a"; // Green
-      } else {
-        status.textContent = `❌ エラー: ${d.error || '不明なエラー'}`;
-        status.style.color = "#ff3b30"; // Red
-      }
-    } catch (err) { 
-      status.textContent = "❌ ファイル形式エラー (JSON形式を確認してください)";
-      status.style.color = "#ff3b30";
-    }
-  };
-  reader.readAsText(fileInput.files[0]);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const json = JSON.parse(e.target.result);
+            status.textContent = `送信中 (${json.length}件)...`;
+
+            const res = await fetch('/api/import-history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: e.target.result // Send raw text content
+            });
+            const d = await res.json();
+            if (d.success) {
+                status.textContent = `✅ ${d.count}件インポート完了`;
+                status.style.color = "#1dc93a"; // Green
+            } else {
+                status.textContent = `❌ エラー: ${d.error || '不明なエラー'}`;
+                status.style.color = "#ff3b30"; // Red
+            }
+        } catch (err) {
+            status.textContent = "❌ ファイル形式エラー (JSON形式を確認してください)";
+            status.style.color = "#ff3b30";
+        }
+    };
+    reader.readAsText(fileInput.files[0]);
 }

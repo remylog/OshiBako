@@ -3,7 +3,7 @@ services:
   app:
     build: .
     ports:
-      - "8081:3000"
+      - "9005:3000"
     volumes:
       # ホストのdataフォルダをコンテナにマウント（DBが消えないようにする）
       - ./data:/app/data

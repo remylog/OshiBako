@@ -104,7 +104,6 @@ body {
     overflow: hidden;
 }
 
-/* ★修正: #category-sidebar を #group-sidebar に変更 */
 #group-sidebar {
     width: 250px;
     background-color: #ffffff;
@@ -116,7 +115,6 @@ body {
     overflow-y: hidden;
 }
 
-/* ★修正: #category-sidebar h2 を #group-sidebar h2 に変更 */
 #group-sidebar h2 {
     font-size: 15px;
     font-weight: 700;
@@ -137,7 +135,6 @@ body {
     overflow-y: auto;
 }
 
-/* ★修正: #category-button-wrapper-vertical を #group-button-wrapper-vertical に変更 */
 #group-button-wrapper-vertical {
     display: flex;
     flex-direction: column;
@@ -149,7 +146,6 @@ body {
     padding: 0 10px 0 10px;
 }
 
-/* ★修正: .category-btn-list を .group-btn-list に変更 */
 .group-btn-list {
     display: block;
     width: 100%;
@@ -164,12 +160,10 @@ body {
     transition: background-color 0.2s;
 }
 
-/* ★修正: .category-btn-list:hover を .group-btn-list:hover に変更 */
 .group-btn-list:hover {
     background-color: #f0f0f0;
 }
 
-/* ★修正: .category-btn-list.active を .group-btn-list.active に変更 */
 .group-btn-list.active {
     background-color: #e0e0e0;
     color: #1d1d1f;
@@ -178,11 +172,65 @@ body {
 
 #main {
     flex: 1;
-    padding: 5px 30px;
+    padding: 30px;
     overflow-y: auto;
     position: relative;
     background-color: #ffffff;
 }
+
+/* 動画フィルターエリアのスタイル */
+#video-filters {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: 20px;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-group label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #444444;
+    white-space: nowrap;
+}
+
+.filter-select {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #d2d2d7;
+    background-color: #ffffff;
+    font-size: 13px;
+    color: #1d1d1f;
+}
+
+.keyword-filter {
+    flex-grow: 1;
+}
+
+/* ★修正: #keyword-exclude を #keyword-search に変更 */
+#keyword-search {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d2d2d7;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #1d1d1f;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#keyword-search:focus {
+    border-color: #007aff;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+    outline: none;
+}
+
 
 #status {
     margin-bottom: 20px;
@@ -346,6 +394,7 @@ body {
     text-decoration: none;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2; /* 標準プロパティを追加 */
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -439,7 +488,6 @@ body {
         overflow: visible;
     }
 
-    /* ★修正: #category-sidebar を #group-sidebar に変更 */
     #group-sidebar {
         display: none;
     }
@@ -448,6 +496,24 @@ body {
         padding: 15px;
         order: 1;
         overflow-y: visible;
+    }
+
+    /* モバイル用フィルターレイアウト */
+    #video-filters {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding-bottom: 15px;
+        margin-bottom: 15px;
+    }
+
+    .filter-group {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .filter-group.keyword-filter {
+        width: 100%;
     }
 
     #group-buttons {
@@ -469,6 +535,9 @@ body {
         white-space: nowrap;
         gap: 10px;
         border-bottom: 1px solid #e0e0e0;
+
+        margin: 0;
+        padding: 15px 15px 15px 15px;
     }
 
     .channel-list-button {

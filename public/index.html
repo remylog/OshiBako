@@ -1,66 +1,88 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>YouTube Dashboard</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%BA%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="apple-touch-icon" href="./icon.png">
 </head>
+
 <body>
-    
+
     <header id="header">
-        <h1>📺 Dashboard</h1>
-        
+        <h1><i class="fa-solid fa-server"></i> Dashboard</h1>
+
         <div class="header-actions">
             <select id="limitSelect" class="pc-limit-select">
                 <option value="25">最新 25件</option>
-                <option value="50">最新 50件</option>
+                <option value="50" selected>最新 50件</option>
                 <option value="100">最新 100件</option>
                 <option value="9999">すべて</option>
             </select>
-            <button id="refreshBtn" class="action-btn">🔄 更新</button>
-            <a href="/settings.html" id="settingsLink" class="action-btn">⚙️ 設定</a>
+            <button id="refreshBtn" class="action-btn"><i class="fa-solid fa-arrows-rotate"></i> 更新</button>
+            <a href="/settings.html" id="settingsLink" class="action-btn"><i class="fa-solid fa-gear"></i> 設定</a>
         </div>
-        
+
         <div class="mobile-limit-select-container">
-            <select class="mobile-limit-select" onchange="document.getElementById('limitSelect').value = this.value; document.getElementById('limitSelect').dispatchEvent(new Event('change'));" style="padding:6px; border-radius:4px; border:1px solid #ddd; font-size:12px; background:white;">
+            <select class="mobile-limit-select"
+                onchange="document.getElementById('limitSelect').value = this.value; document.getElementById('limitSelect').dispatchEvent(new Event('change'));"
+                style="padding:6px; border-radius:4px; border:1px solid #ddd; font-size:12px; background:white;">
                 <option value="25">25件</option>
-                <option value="50">50件</option>
+                <option value="50" selected>50件</option>
                 <option value="100">100件</option>
                 <option value="9999">全</option>
             </select>
-            <a href="/settings.html" class="action-btn" style="padding:6px 10px; min-width:35px;">⚙️</a>
+            <a href="/settings.html" class="action-btn" style="padding:6px 10px; min-width:35px;"><i
+                    class="fa-solid fa-gear"></i></a>
         </div>
     </header>
 
     <div id="content-wrapper">
-        
+
         <div id="group-sidebar">
             <h2>グループ</h2>
             <div id="group-buttons">
             </div>
         </div>
-        
+
         <div id="main">
+
+            <div id="video-filters">
+                <div class="filter-group">
+                    <label>表示:</label>
+                    <select id="watched-filter" class="filter-select">
+                        <option value="unwatched">未閲覧のみ</option>
+                        <option value="all">全て</option>
+                        <option value="watched">閲覧済みのみ</option>
+                    </select>
+                </div>
+                <div class="filter-group keyword-filter">
+                    <input type="text" id="keyword-search" placeholder="タイトル検索 (Enterで実行)">
+                </div>
+            </div>
+
             <div id="channelListWrapper">
             </div>
-            
+
             <div id="status" style="font-size:12px; text-align:right;">準備完了</div>
-            
+
             <div id="videoGrid" class="video-grid"></div>
         </div>
     </div>
 
 
-  <script src="dashboard.js"></script>
-  <script>
-    const limitSelect = document.getElementById('limitSelect');
-    const mobileSelect = document.querySelector('.mobile-limit-select');
-    if(limitSelect && mobileSelect) {
-        mobileSelect.value = limitSelect.value;
-        limitSelect.addEventListener('change', () => { mobileSelect.value = limitSelect.value; });
-    }
-  </script>
+    <script src="dashboard.js"></script>
+    <script>
+        const limitSelect = document.getElementById('limitSelect');
+        const mobileSelect = document.querySelector('.mobile-limit-select');
+        if (limitSelect && mobileSelect) {
+            mobileSelect.value = limitSelect.value;
+            limitSelect.addEventListener('change', () => { mobileSelect.value = limitSelect.value; });
+        }
+    </script>
 </body>
+
 </html>

@@ -2,10 +2,17 @@ let allVideos = [];
 let allChannels = []; 
 let currentFilterType = 'channel'; 
 let currentFilterId = 'all'; 
-let displayLimit = 25;
+let displayLimit = 50; 
+let currentWatchedFilter = 'unwatched'; 
+let currentExcludeKeywords = [];
+let currentSearchKeyword = '';
 
 document.addEventListener('DOMContentLoaded', () => {
   initUI();
+  const limitSelect = document.getElementById('limitSelect');
+  if (limitSelect && limitSelect.value) {
+      displayLimit = parseInt(limitSelect.value, 10);
+  }
   loadVideos();
 });
 
@@ -20,6 +27,31 @@ function initUI() {
       renderVideos();
     });
   }
+
+  const watchedFilter = document.getElementById('watched-filter');
+  if (watchedFilter) {
+      watchedFilter.value = currentWatchedFilter;
+      watchedFilter.addEventListener('change', (e) => {
+          currentWatchedFilter = e.target.value;
+          renderVideos();
+      });
+  }
+
+  const keywordSearch = document.getElementById('keyword-search');
+  if (keywordSearch) {
+      keywordSearch.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+              currentSearchKeyword = e.target.value.toLowerCase().trim();
+              renderVideos();
+          }
+      });
+      keywordSearch.addEventListener('input', (e) => {
+           if (e.target.value.trim() === '' && currentSearchKeyword !== '') {
+               currentSearchKeyword = '';
+               renderVideos();
+           }
+      });
+  }
 }
 
 async function loadVideos() {
@@ -28,6 +60,8 @@ async function loadVideos() {
   
   const grid = document.getElementById('videoGrid');
   if(grid) grid.style.opacity = '0.5';
+
+  await loadExcludeKeywords();
 
   try {
     const videoRes = await fetch('/api/videos');
@@ -45,6 +79,19 @@ async function loadVideos() {
     console.error("❌ loadVideos Error:", e);
     if(status) status.textContent = 'エラーが発生しました: ' + e.message;
   }
+}
+
+async function loadExcludeKeywords() {
+    try {
+        const res = await fetch('/api/settings/exclude-keywords');
+        const data = await res.json();
+        if (res.ok) {
+            const keywordsString = data.keywords || '';
+            currentExcludeKeywords = keywordsString.toLowerCase().split(',').map(k => k.trim()).filter(k => k);
+        }
+    } catch (e) {
+        console.error("Error loading exclude keywords:", e);
+    }
 }
 
 async function getChannels() {
@@ -68,14 +115,37 @@ function renderVideos() {
   let filtered = allVideos;
   
   if (currentFilterType === 'channel' && currentFilterId !== 'all') {
-    filtered = allVideos.filter(v => v.channel_id === currentFilterId);
+    filtered = filtered.filter(v => v.channel_id === currentFilterId);
   } 
   else if (currentFilterType === 'group' && currentFilterId !== 'all') { 
-    filtered = allVideos.filter(v => {
-      const gName = v.group_name || ""; 
-      const groups = gName.split(',').map(g => g.trim());
-      return groups.includes(currentFilterId);
-    });
+    if (currentFilterId === 'pinned_group') { 
+      filtered = filtered.filter(v => v.isPinned);
+    } else {
+      filtered = filtered.filter(v => {
+        const gName = v.group_name || ""; 
+        const groups = gName.split(',').map(g => g.trim());
+        return groups.includes(currentFilterId);
+      });
+    }
+  }
+
+  if (currentWatchedFilter === 'unwatched') {
+      filtered = filtered.filter(v => !v.isWatched);
+  } else if (currentWatchedFilter === 'watched') {
+      filtered = filtered.filter(v => v.isWatched);
+  }
+
+  if (currentSearchKeyword) {
+      filtered = filtered.filter(v => 
+          v.title.toLowerCase().includes(currentSearchKeyword)
+      );
+  }
+
+  if (currentExcludeKeywords.length > 0) {
+      filtered = filtered.filter(v => {
+          const title = v.title.toLowerCase();
+          return !currentExcludeKeywords.some(keyword => title.includes(keyword));
+      });
   }
 
   filtered.sort((a, b) => {
@@ -93,11 +163,17 @@ function renderVideos() {
       const channel = allChannels.find(c => c.id === currentFilterId);
       currentFilterName = channel ? channel.name : 'チャンネル';
   }
+  else if (currentFilterId === 'pinned_group') {
+      // ★修正: ピン留めグループのアイコンから絵文字を削除
+      currentFilterName = '<i class="fa-regular fa-bookmark"></i> ピン留め済み'; 
+  }
   else if (currentFilterType === 'group') {
       currentFilterName = currentFilterId; 
   }
   
-  if(status) status.innerHTML = `<strong>${currentFilterName}</strong> の動画: ${display.length}件を表示中 (全${total}件)`;
+  const watchedStatusText = currentWatchedFilter === 'unwatched' ? ' (未閲覧)' : currentWatchedFilter === 'watched' ? ' (閲覧済み)' : '';
+
+  if(status) status.innerHTML = `<strong>${currentFilterName}</strong>${watchedStatusText} の動画: ${display.length}件を表示中 (全${total}件)`;
 
   display.forEach(video => {
     const card = document.createElement('div');
@@ -135,7 +211,7 @@ function renderVideos() {
           </div>
           <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
             <div style="display:flex; gap:5px; align-items:center; margin-top:5px;">
-              <button class="${pinBtnClass}" title="あとで見る（ピン留め）">📌</button>
+              <button class="${pinBtnClass}" title="あとで見る（ピン留め）"><i class="fa-solid fa-thumbtack"></i></button>
               <button class="mark-watched-btn">${btnText}</button>
             </div>
           </div>
@@ -278,38 +354,21 @@ async function createGroupButtons() {
     
     groupButtonsContainer.innerHTML = ''; 
     
+    // ★修正: ピン留めグループのアイコンをFont Awesomeに変更
+    const pinnedGroup = {
+        name: 'ピン留め済み',
+        icon: '<i class="fa-regular fa-bookmark"></i>',
+        id: 'pinned_group'
+    };
+    
     const groupButtonWrapper = document.createElement('div');
     groupButtonWrapper.id = 'group-button-wrapper-vertical'; 
     
+    const pinnedBtn = createGroupButtonElement(pinnedGroup);
+    groupButtonWrapper.appendChild(pinnedBtn);
+    
     groups.forEach(group => {
-        const btn = document.createElement('button');
-        btn.className = 'group-btn-list'; 
-        btn.innerHTML = `${group.icon} ${group.name}`;
-        btn.dataset.groupId = group.id;
-        
-        let isActive = currentFilterId === group.id && currentFilterType === 'group';
-        if (isActive) {
-            btn.classList.add('active');
-        }
-
-        btn.addEventListener('click', async (e) => {
-            document.querySelectorAll('.channel-list-button').forEach(i => i.classList.remove('active'));
-            document.querySelectorAll('.group-btn-list').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            
-            currentFilterType = 'group';
-            currentFilterId = group.id;
-            
-            renderVideos(); 
-            
-            const mainContainer = document.getElementById('main');
-            if (mainContainer) {
-                mainContainer.scrollTo({
-                    top: 0,
-                    behavior: 'smooth'
-                });
-            }
-        });
+        const btn = createGroupButtonElement(group);
         groupButtonWrapper.appendChild(btn);
     });
 
@@ -322,26 +381,55 @@ async function createGroupButtons() {
         if(initialActiveBtn) {
             initialActiveBtn.classList.add('active');
         } 
-        else if (groups.length > 0) {
+        else if (currentFilterId !== 'all') {
             currentFilterId = 'all';
             currentFilterType = 'channel';
             document.querySelector('.channel-list-button[data-channel-id="all"]')?.classList.add('active');
         }
-    } else if (allActive) {
-        // PC版はグループ選択なし
+    } 
+    else if (allActive) {
+    } else {
+        if (groupButtonWrapper.children.length > 0) {
+            pinnedBtn.classList.add('active');
+            currentFilterType = 'group';
+            currentFilterId = 'pinned_group';
+        }
     }
 }
 
+function createGroupButtonElement(group) {
+    const btn = document.createElement('button');
+    btn.className = 'group-btn-list'; 
+    btn.innerHTML = `${group.icon} ${group.name}`;
+    btn.dataset.groupId = group.id;
+    
+    let isActive = currentFilterId === group.id && currentFilterType === 'group';
+    if (isActive) {
+        btn.classList.add('active');
+    }
+
+    btn.addEventListener('click', async (e) => {
+        document.querySelectorAll('.channel-list-button').forEach(i => i.classList.remove('active'));
+        document.querySelectorAll('.group-btn-list').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        currentFilterType = 'group';
+        currentFilterId = group.id;
+        
+        renderVideos(); 
+        
+        const mainContainer = document.getElementById('main');
+        if (mainContainer) {
+            mainContainer.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+    });
+    return btn;
+}
+
+// ★修正: Font Awesomeアイコンを使用
 function getGroupIcon(name) {
-    if (!name) return '📁';
-    const lower = name.toLowerCase();
-    
-    if (lower.includes('ゲーム')) return '🎮';
-    if (lower.includes('ライブ')) return '🔴';
-    if (lower.includes('音楽')) return '🎵';
-    if (lower.includes('ニュース')) return '📰';
-    if (lower.includes('スポーツ')) return '⚽';
-    if (lower.includes('未分類')) return '🗂️';
-    
-    return '📺';
+    return '<i class="fa-solid fa-folder-closed"></i>';
 }

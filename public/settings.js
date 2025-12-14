@@ -4,7 +4,7 @@ let allGroups = [];
 document.addEventListener('DOMContentLoaded', () => {
     initSettingsUI();
     loadData();
-    initTabs(); 
+    // initTabs(); // ★削除: タブ機能廃止
 });
 
 function initSettingsUI() {
@@ -13,50 +13,66 @@ function initSettingsUI() {
     document.getElementById('clearCacheBtn').addEventListener('click', clearVideoCache);
     document.getElementById('resetAllBtn').addEventListener('click', resetAllData);
     document.getElementById('importHistoryBtn').addEventListener('click', importHistory);
-}
-
-function initTabs() {
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    const tabPanes = document.querySelectorAll('.tab-pane');
-
-    const switchTab = (targetTabId) => {
-        tabButtons.forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.tab === targetTabId) {
-                btn.classList.add('active');
-            }
-        });
-
-        tabPanes.forEach(pane => {
-            if (pane.id === targetTabId) {
-                pane.classList.add('active');
-            } else {
-                pane.classList.remove('active');
-            }
-        });
-        
-        const container = document.getElementById('settings-container');
-        if (container) {
-            container.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    };
-
-    tabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            switchTab(btn.dataset.tab);
-        });
-    });
-
-    if (tabButtons.length > 0) {
-        switchTab(tabButtons[0].dataset.tab);
+    document.getElementById('saveExcludeKeywordsBtn').addEventListener('click', saveExcludeKeywords);
+    
+    const saveAllBtn = document.getElementById('saveAllAssociationsBtn');
+    if (saveAllBtn) {
+        saveAllBtn.addEventListener('click', saveAllAssociations);
     }
 }
+
+// initTabs関数は削除
 
 async function loadData() {
     await fetchApiStatus();
     await fetchChannels();
     await fetchGroups();
     manageAssociations();
+    await loadExcludeKeywords();
+}
+
+async function loadExcludeKeywords() {
+    const input = document.getElementById('excludeKeywordsInput');
+    if (!input) return; 
+
+    try {
+        const res = await fetch('/api/settings/exclude-keywords');
+        const data = await res.json();
+        if (res.ok) {
+            input.value = data.keywords || '';
+        }
+    } catch (e) {
+        console.error("Error loading exclude keywords:", e);
+    }
+}
+
+async function saveExcludeKeywords() {
+    const input = document.getElementById('excludeKeywordsInput');
+    const status = document.getElementById('excludeKeywordsStatus');
+    const keywords = input.value.trim();
+
+    status.textContent = '保存中...';
+    status.style.color = "#888888"; 
+
+    try {
+        const res = await fetch('/api/settings/exclude-keywords', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ keywords: keywords })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            status.textContent = `✅ 除外キーワードを保存しました。`;
+            status.style.color = "#1dc93a"; 
+        } else {
+            status.textContent = `❌ 保存エラー: ${data.error || '不明なエラー'}`;
+            status.style.color = "#ff3b30"; 
+        }
+    } catch (e) {
+        status.textContent = `❌ ネットワークエラー: ${e.message}`;
+        status.style.color = "#ff3b30";
+    }
 }
 
 async function fetchApiStatus() {
@@ -345,19 +361,25 @@ async function deleteGroup(name) {
 function manageAssociations() {
     const container = document.getElementById('channelAssociationList');
     const status = document.getElementById('associationStatus');
+    const saveAllBtn = document.getElementById('saveAllAssociationsBtn');
     container.innerHTML = '';
 
     const activeChannels = allChannels.filter(c => !c.deleted_at);
 
     if (activeChannels.length === 0) {
         container.innerHTML = '<p style="text-align:center; padding: 20px;">登録チャンネルがありません。</p>';
+        if (saveAllBtn) saveAllBtn.disabled = true;
         return;
     }
 
     if (allGroups.length === 0) {
         container.innerHTML = '<p style="text-align:center; padding: 20px;">グループがありません。グループ追加セクションで作成してください。</p>';
+        if (saveAllBtn) saveAllBtn.disabled = true;
         return;
     }
+    
+    // チャンネルとグループが存在する場合、ボタンを有効化
+    if (saveAllBtn) saveAllBtn.disabled = false;
 
     const ul = document.createElement('ul');
     ul.className = 'association-list';
@@ -368,7 +390,7 @@ function manageAssociations() {
     });
 
     container.appendChild(ul);
-    status.textContent = `選択後、チャンネル名の下の「保存」ボタンを押してください。`;
+    status.textContent = `変更後、「全ての紐付けを一括保存」ボタンを押してください。`;
 }
 
 function createAssociationListItem(channel) {
@@ -378,6 +400,7 @@ function createAssociationListItem(channel) {
 
     const currentGroups = channel.group_name ? channel.group_name.split(',').map(g => g.trim()).filter(g => g) : [];
 
+    // 1. チャンネル情報 (名前と現在の紐付け)
     const infoDiv = document.createElement('div');
     infoDiv.className = 'association-channel-info';
 
@@ -389,6 +412,7 @@ function createAssociationListItem(channel) {
     infoDiv.appendChild(currentGroupsDisplay);
 
 
+    // 2. グループ選択チェックボックスリスト
     const groupSelector = document.createElement('div');
     groupSelector.className = 'group-selector'; 
 
@@ -405,6 +429,8 @@ function createAssociationListItem(channel) {
         checkbox.id = checkboxId;
         checkbox.value = groupName;
         checkbox.checked = currentGroups.includes(groupName);
+        // data-original-state を追加し、変更が起こったか追跡できるようにする
+        checkbox.dataset.originalState = checkbox.checked ? 'true' : 'false';
 
         label.appendChild(checkbox);
         const labelText = document.createElement('span');
@@ -414,57 +440,100 @@ function createAssociationListItem(channel) {
         groupSelector.appendChild(label);
     });
 
-    const saveBtn = document.createElement('button');
-    saveBtn.textContent = '保存';
-    saveBtn.className = 'save-association-btn';
-    saveBtn.addEventListener('click', () => saveChannelAssociation(channel.id, li));
-
     li.appendChild(infoDiv);
     li.appendChild(groupSelector);
-    li.appendChild(saveBtn);
     return li;
 }
 
-async function saveChannelAssociation(channelId, listItem) {
-    const selectedGroups = Array.from(listItem.querySelectorAll('input[type="checkbox"]:checked'))
-        .map(cb => cb.value)
-        .join(',');
+async function saveAllAssociations() {
+    const container = document.getElementById('channelAssociationList');
+    const allStatusDiv = document.getElementById('allAssociationStatus');
+    const saveAllBtn = document.getElementById('saveAllAssociationsBtn');
+    
+    if (container.classList.contains('saving')) return; 
 
-    const status = document.getElementById('associationStatus');
-    const originalText = listItem.querySelector('.save-association-btn').textContent;
+    // 1. UIを保存中状態に切り替え
+    container.classList.add('saving');
+    saveAllBtn.disabled = true;
+    allStatusDiv.innerHTML = '保存処理を開始しました...';
+    allStatusDiv.style.color = "#007aff";
 
-    listItem.classList.add('saving');
-    listItem.querySelector('.save-association-btn').textContent = '保存中...';
 
-    try {
-        const res = await fetch(`/api/channels/${channelId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ group: selectedGroups }) 
-        });
+    const listItems = container.querySelectorAll('.association-item');
+    const updatePromises = [];
+    let savedCount = 0;
+    let totalChanges = 0;
 
-        const data = await res.json();
-        if (res.ok) {
-            status.textContent = `✅ チャンネルの紐付けを保存しました。`;
-            listItem.querySelector('.save-association-btn').textContent = '保存済み';
-            listItem.classList.add('saved-success');
+    listItems.forEach(li => {
+        const channelId = li.dataset.channelId;
+        const checkboxes = li.querySelectorAll('input[type="checkbox"]');
+        
+        let changed = false;
+        const selectedGroups = Array.from(checkboxes)
+            .map(cb => {
+                // 変更があったかチェック
+                const currentState = cb.checked ? 'true' : 'false';
+                if (currentState !== cb.dataset.originalState) {
+                    changed = true;
+                }
+                return cb.checked ? cb.value : null;
+            })
+            .filter(v => v !== null)
+            .join(',');
 
-            setTimeout(() => {
-                listItem.classList.remove('saved-success');
-                listItem.querySelector('.save-association-btn').textContent = originalText;
-                loadData();
-            }, 1000);
-
-        } else {
-            status.textContent = `❌ 保存エラー: ${data.error || '不明なエラー'}`;
-            listItem.querySelector('.save-association-btn').textContent = 'エラー';
+        if (changed) {
+            totalChanges++;
+            // 2. 各チャンネルの更新を非同期で実行
+            const promise = fetch(`/api/channels/${channelId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ group: selectedGroups }) 
+            })
+            .then(res => {
+                if (res.ok) {
+                    savedCount++;
+                    // UI上のチェックボックスの状態をリセット
+                    checkboxes.forEach(cb => {
+                        cb.dataset.originalState = cb.checked ? 'true' : 'false';
+                    });
+                    // 更新されたチャンネルのグループ表示も更新
+                    const currentGroupsDisplay = li.querySelector('.current-groups-display');
+                    currentGroupsDisplay.textContent = selectedGroups.length > 0 ? selectedGroups.split(',').join(', ') : '紐付けなし';
+                } else {
+                    console.error(`Error saving channel ${channelId}`);
+                }
+            })
+            .catch(e => {
+                console.error(`Network Error saving channel ${channelId}:`, e);
+            });
+            
+            updatePromises.push(promise);
         }
-    } catch (e) {
-        status.textContent = `❌ ネットワークエラー: ${e.message}`;
-        listItem.querySelector('.save-association-btn').textContent = 'エラー';
-    } finally {
-        listItem.classList.remove('saving');
+    });
+
+    // 3. 全ての更新が完了するのを待つ
+    await Promise.allSettled(updatePromises);
+
+    // 4. UIを完了状態に戻す
+    container.classList.remove('saving');
+    saveAllBtn.disabled = false;
+
+    if (totalChanges === 0) {
+        allStatusDiv.innerHTML = '✅ 変更はありませんでした。';
+        allStatusDiv.style.color = "#888888";
+    } else if (savedCount === totalChanges) {
+        allStatusDiv.innerHTML = `✅ 全ての紐付け (${savedCount}件) を正常に保存しました。`;
+        allStatusDiv.style.color = "#1dc93a";
+    } else {
+        allStatusDiv.innerHTML = `❌ 保存エラー: ${totalChanges - savedCount}件のチャンネルの保存に失敗しました。`;
+        allStatusDiv.style.color = "#ff3b30";
     }
+
+    // 5. 5秒後にステータス表示をリセットし、データを再ロード
+    setTimeout(() => {
+        allStatusDiv.textContent = '';
+        loadData(); // データの最新状態を再読み込み
+    }, 5000);
 }
 
 

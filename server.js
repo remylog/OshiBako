@@ -13,10 +13,8 @@ const PORT = 3000;
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
-// サーバー起動時のキー存在チェックはそのまま維持
 if (!YOUTUBE_API_KEY) {
   console.error("❌ エラー: YOUTUBE_API_KEY が設定されていません。");
-  // サーバーの起動は続行せず、終了
   process.exit(1); 
 }
 
@@ -57,13 +55,19 @@ db.serialize(() => {
     channel_ids TEXT
   )`);
 
-  db.run("ALTER TABLE channels ADD COLUMN deleted_at INTEGER DEFAULT NULL", () => { });
-  db.run("ALTER TABLE videos ADD COLUMN is_pinned INTEGER DEFAULT 0", () => { });
-  db.run("ALTER TABLE videos ADD COLUMN description TEXT", () => { });
-
   db.run(`CREATE TABLE IF NOT EXISTS watched (
     video_id TEXT PRIMARY KEY
   )`);
+  
+  // ★NEW: settingsテーブルの追加 (除外キーワード等の設定保存用)
+  db.run(`CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  )`);
+
+  db.run("ALTER TABLE channels ADD COLUMN deleted_at INTEGER DEFAULT NULL", () => { });
+  db.run("ALTER TABLE videos ADD COLUMN is_pinned INTEGER DEFAULT 0", () => { });
+  db.run("ALTER TABLE videos ADD COLUMN description TEXT", () => { });
 });
 
 // ▼ 定期実行 (毎日 AM 03:00) ▼
@@ -140,40 +144,55 @@ async function backfillPastVideos() {
 
 // ▼ APIエンドポイント ▼
 
-// ★修正: APIキーの有効性をチェックするエンドポイント
+// APIキーの有効性をチェックするエンドポイント
 app.get('/api/status', async (req, res) => {
-  // YOUTUBE_API_KEYが環境変数に設定されていない場合（サーバー起動時に既にチェックされているはずだが、念のため）
   if (!YOUTUBE_API_KEY) {
     return res.json({ youtube_api_available: false, reason: "Key not configured" });
   }
 
-  // 既知の公開チャンネルID（Google Developers）を使って、最小限のAPIコールを試行
   const testChannelId = 'UC_x5XG1OV2P6uZZ5FSM9Ttw';
   const testUrl = `https://www.googleapis.com/youtube/v3/channels?part=id&id=${testChannelId}&key=${YOUTUBE_API_KEY}`;
 
   try {
-    // 成功するとstatus 200が返る
     const testRes = await axios.get(testUrl);
     
-    // 正常な応答が確認できれば、キーは有効
     if (testRes.status === 200 && testRes.data && testRes.data.items && testRes.data.items.length > 0) {
         return res.json({ youtube_api_available: true });
     }
     
-    // 正常に通信できたがデータが空だった場合（通常ありえないが、念のため無効扱い）
     return res.json({ youtube_api_available: false, reason: "Empty response" });
 
   } catch (error) {
-    // APIキーが無効な場合、通常 400 (Bad Request) または 403 (Forbidden) が返る
     if (error.response && (error.response.status === 400 || error.response.status === 403)) {
-      // 認証エラーやAPIキーのエラーは無効と判断
       return res.json({ youtube_api_available: false, reason: "API Key Invalid or Quota Exceeded" });
     }
     
-    // その他のネットワークエラーなどは不明なエラーとして処理
     return res.json({ youtube_api_available: false, reason: "Network or unknown error" });
   }
 });
+
+
+// ★NEW: 除外キーワード設定の取得
+app.get('/api/settings/exclude-keywords', (req, res) => {
+    db.get("SELECT value FROM settings WHERE key = 'exclude_keywords'", (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ keywords: row ? row.value : '' });
+    });
+});
+
+// ★NEW: 除外キーワード設定の保存
+app.put('/api/settings/exclude-keywords', (req, res) => {
+    const { keywords } = req.body;
+    db.run(
+        `INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
+        ['exclude_keywords', keywords || ''],
+        function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true, message: "除外キーワードを保存しました" });
+        }
+    );
+});
+
 
 app.get('/api/groups', (req, res) => {
   db.all('SELECT group_name, channel_ids FROM groups', [], (err, rows) => {
@@ -190,7 +209,7 @@ app.post('/api/groups', (req, res) => {
   const { group_name, channel_ids } = req.body;
 
   if (!group_name) {
-    return res.status(400).json({ "error": "カテゴリ名が必要です。" });
+    return res.status(400).json({ "error": "グループ名が必要です。" });
   }
 
   db.run(
@@ -203,7 +222,7 @@ app.post('/api/groups', (req, res) => {
         console.error('Database Error (POST /api/groups):', err.message);
         return res.status(500).json({ "error": err.message });
       }
-      res.json({ message: "カテゴリを保存しました。", id: this.lastID });
+      res.json({ message: "グループを保存しました。", id: this.lastID });
     }
   );
 });
@@ -217,9 +236,9 @@ app.delete('/api/groups/:group_name', (req, res) => {
       return res.status(500).json({ "error": err.message });
     }
     if (this.changes === 0) {
-      return res.status(404).json({ "error": "指定されたカテゴリが見つかりませんでした。" });
+      return res.status(404).json({ "error": "指定されたグループが見つかりませんでした。" });
     }
-    res.json({ message: "カテゴリを削除しました。" });
+    res.json({ message: "グループを削除しました。" });
   });
 });
 
